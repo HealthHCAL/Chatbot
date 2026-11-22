@@ -457,7 +457,7 @@ const providers={
       const {system,messages}=buildMessages(p.prompt,p.history,p.knowledge,16000,p.rules);
       const has=!!(p.knowledge&&p.knowledge.trim());
       const r=await fetch(this.base()+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal,
-        body:JSON.stringify({model:p.model,messages:[{role:'system',content:system},...messages],stream:true,options:{num_ctx:has?8192:4096,num_predict:768}})});
+        body:JSON.stringify({model:p.model,messages:[{role:'system',content:system},...messages],stream:true,options:{num_ctx:has?8192:4096,num_predict:768,temperature:0.3}})});
       if(!r.ok)throw await httpError(r);
       let done=false;
       await readLines(r,line=>{
@@ -597,7 +597,7 @@ const providers={
       const engine=this.engine,onAbort=()=>{try{engine.interruptGenerate();}catch{}};
       signal.addEventListener('abort',onAbort);
       try{
-        const stream=await engine.chat.completions.create({messages:[{role:'system',content:system},...messages],stream:true,max_tokens:768});
+        const stream=await engine.chat.completions.create({messages:[{role:'system',content:system},...messages],stream:true,max_tokens:768,temperature:0.3});
         for await(const chunk of stream){const t=chunk.choices&&chunk.choices[0]&&chunk.choices[0].delta&&chunk.choices[0].delta.content;if(t)emit({type:'token',text:t});}
       }finally{signal.removeEventListener('abort',onAbort);}
       if(signal.aborted)throw new DOMException('aborted','AbortError');
@@ -966,6 +966,7 @@ const STOP=new Set(['에는','에서','으로','는데','니다','습니','해�
 function termsOf(text){
   const set=new Set(),low=text.toLowerCase();
   for(const w of low.match(/[a-z0-9]{2,}/g)||[])set.add(w);
+  for(const w of low.match(/\d+\s?[가-힣]/g)||[])set.add(w.replace(/\s/,''));
   for(const run of low.match(/[가-힣]+/g)||[]){for(let i=0;i<run.length-1;i++)set.add(run.slice(i,i+2));}
   for(const t of STOP)set.delete(t);
   return set;
@@ -973,19 +974,23 @@ function termsOf(text){
 const chunkCache=new Map();
 function chunksOf(k){
   const key=k.name+'|'+k.text.length;if(chunkCache.has(key))return chunkCache.get(key);
-  const out=[];let cur='';const push=()=>{if(cur.trim())out.push(cur.trim());cur='';};
-  for(const para of k.text.split(/\n\s*\n|\n(?=#{1,6}\s|\d+\.\s|[■●▶◆□○]\s?)/)){
-    if(/^(#{1,6}\s|\d+\.\s|[■●▶◆□○])/.test(para.trim()))push();
-    if(para.length>900){push();for(let i=0;i<para.length;i+=700)out.push(para.slice(i,i+800).trim());continue;}
-    if(cur.length+para.length>700)push();
-    cur+=(cur?'\n\n':'')+para;
+  /* 제목(## …) 단위로 나누고, 그 안에서 줄을 350자 안팎으로 묶는다. 각 조각 앞에 제목을 붙여 뜻이 통하게 한다. */
+  const out=[];let heading='',cur='';
+  const push=()=>{const body=cur.trim();cur='';if(!body)return;out.push({heading,body});};
+  for(const raw of k.text.split(/\n/)){
+    const line=raw.trim();
+    if(!line){if(cur.length>200)push();continue;}
+    if(/^#{1,6}\s/.test(line)){push();heading=line.replace(/^#{1,6}\s*/,'');continue;}
+    if(line.length>500){push();for(let i=0;i<line.length;i+=350)out.push({heading,body:line.slice(i,i+400)});continue;}
+    if(cur.length+line.length>240)push();
+    cur+=(cur?'\n':'')+line;
   }
   push();
-  const list=out.filter(Boolean).map(text=>({name:k.name,text,terms:termsOf(text)}));
+  const list=out.map(({heading:h,body})=>{const text=h&&!body.startsWith(h)?'['+h+']\n'+body:body;return {name:k.name,text,body,terms:termsOf(text)};});
   chunkCache.set(key,list);return list;
 }
 function bestExcerpt(text,terms){
-  const parts=text.split(/(?<=[.!?。])\s+|\n+/).map(t=>t.trim()).filter(Boolean);
+  const parts=text.split(/(?<=[.!?。])\s+|\n+/).map(t=>t.trim()).filter(t=>t&&!/^\[.*\]$/.test(t));
   let best=0,bestScore=-1;
   parts.forEach((p,i)=>{let sc=0;const t=termsOf(p);for(const q of terms)if(t.has(q))sc++;if(sc>bestScore){bestScore=sc;best=i;}});
   let out=parts[best]||text;if(out.length<90&&parts[best+1])out+=' '+parts[best+1];
@@ -995,8 +1000,7 @@ function pickKnowledge(query,prevQuery,budget){
   const files=state.knowledge||[];if(!files.length)return {text:''};
   const all=files.flatMap(chunksOf);
   let chosen;
-  if(all.reduce((n,c)=>n+c.text.length,0)<=budget)chosen=all;
-  else{
+  {
     const qNow=termsOf(query),qPrev=new Set([...termsOf(prevQuery||'')].filter(t=>!qNow.has(t)));
     const q=new Set([...qNow,...qPrev]),N=all.length,df=new Map();
     for(const t of q){let d=0;for(const c of all)if(c.terms.has(t))d++;if(d&&d<=Math.max(2,N*0.5))df.set(t,d);}
@@ -1005,7 +1009,7 @@ function pickKnowledge(query,prevQuery,budget){
       .filter(x=>x.now>0).sort((a,b)=>b.sc-a.sc);
     const top=scored.length?scored[0].sc:0;
     const pick=[];let used=0;
-    for(const x of scored){if(x.sc<top*0.35)break;if(used+x.c.text.length>budget)continue;pick.push(x);used+=x.c.text.length;if(used>budget*0.9||pick.length>=6)break;}
+    for(const x of scored){if(x.sc<top*0.45)break;if(used+x.c.text.length>budget)continue;pick.push(x);used+=x.c.text.length;if(used>budget*0.9||pick.length>=4)break;}
     chosen=pick.sort((a,b)=>a.i-b.i).map(x=>x.c);
   }
   if(!chosen.length)return {text:'(이번 질문과 관련 있는 부분을 자료에서 찾지 못했습니다.)',sources:[]};
