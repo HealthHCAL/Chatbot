@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>쉬운 AI</title>
+<meta name="description" content="AI에게 역할을 정해 주고 쉽게 대화하는 웹 앱">
+<style>
+/* Hallmark · checked: 2026-11-22 · genre: editorial (inferred) · shape: app screen · theme: brand
+ * floor: 0 FAIL · fixed: 5 (24a, 39a, 7b, F3, F16) · dismissed: 25 (one-line welcome caption)
+ * built: the project · redesign: polish · v2.0.0 */
+:root{
+  --base-size:22px;
+  --color-paper:#f5f4ee; --color-paper-2:#fffefa; --color-paper-3:#f0f2eb; --color-field:#fffffb; --color-disabled-bg:#e6e9e2; --color-disabled-ink:#56645d;
+  --color-ink:#24352f; --color-ink-2:#33463e; --color-muted:#52635a;
+  --color-rule:#c9d2c9; --color-rule-soft:#e4e7de;
+  --color-accent:#235c45; --color-accent-ink:#fbfdf9; --color-accent-soft:#e4efe5; --color-chip:#eef2e8;
+  --color-focus:#b8691a;
+  --color-warn-bg:#fff1d8; --color-warn-ink:#714416; --color-note:#785d24; --color-danger:#a23b2f; --color-danger-rule:#e0b3ac;
+  --color-drop:#fbfcf9; --color-drop-active:#eef4ee; --color-code:#eceee6;
+  --color-backdrop:rgb(23 39 29 / 0.44); --color-shadow:rgb(36 53 47 / 0.04);
+  --font-body:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  --font-mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --space-2xs:4px; --space-xs:8px; --space-sm:12px; --space-md:16px; --space-ml:20px; --space-lg:24px; --space-xl:32px;
+  --radius-control:12px; --radius-field:10px; --radius-panel:20px; --radius-bubble:16px;
+  --dur-micro:120ms;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{overflow-x:clip}
+html{font-size:var(--base-size);scrollbar-color:var(--color-rule) var(--color-paper)}
+body{margin:0;background:var(--color-paper);color:var(--color-ink);font-family:var(--font-body);font-size:1rem;line-height:1.6;caret-color:var(--color-accent);font-variant-numeric:tabular-nums}
+::selection{background:var(--color-accent-soft);color:var(--color-ink)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:4px solid var(--color-focus);outline-offset:3px}
+[hidden]{display:none!important}
+h1,h2,h3{margin:0;text-wrap:balance;overflow-wrap:break-word;min-width:0;font-weight:700}
+p{margin:0}
+a{color:var(--color-accent);text-underline-offset:.16em}
+code{font-family:var(--font-mono);font-size:.85em;background:var(--color-code);border-radius:6px;padding:1px var(--space-xs);overflow-wrap:anywhere}
+
+button{cursor:pointer;min-height:52px;border:2px solid transparent;border-radius:var(--radius-control);padding:var(--space-sm) var(--space-ml);background:var(--color-accent);color:var(--color-accent-ink);font-weight:700;line-height:1.4}
+button:hover{filter:brightness(.92)}
+button:active{filter:brightness(.85)}
+button:disabled,button.light:disabled{cursor:not-allowed;background:var(--color-disabled-bg);border-color:var(--color-disabled-bg);color:var(--color-disabled-ink);filter:none}
+button.light{background:transparent;border-color:var(--color-rule);color:var(--color-ink)}
+button.light:hover{border-color:var(--color-muted);filter:none}
+.text-button{background:transparent;color:var(--color-accent);text-decoration:underline;padding:var(--space-2xs) var(--space-sm);font-size:.85em;min-height:44px}
+.wide{width:100%;font-size:.9em}
+
+.topbar{max-width:1480px;margin:auto;padding:var(--space-md) var(--space-xl) 0;display:flex;align-items:center;justify-content:space-between;gap:var(--space-md)}
+.wordmark{font-size:1.15em;color:var(--color-accent)}
+.topbar button{font-size:.78em;min-height:48px;padding:var(--space-xs) var(--space-md)}
+main{max-width:1480px;margin:auto;padding:var(--space-md) var(--space-xl) var(--space-lg)}
+.workspace{display:grid;grid-template-columns:minmax(340px,440px) minmax(0,1fr);gap:var(--space-lg)}
+.workspace.sidebar-collapsed{grid-template-columns:minmax(0,1fr)}
+aside,.chat-panel{background:var(--color-paper-2);border:1px solid var(--color-rule);border-radius:var(--radius-panel);box-shadow:0 5px 18px var(--color-shadow)}
+aside{padding:var(--space-lg);align-self:start;min-width:0}
+
+label,.label{display:block;font-size:.85em;font-weight:700;margin-bottom:var(--space-xs)}
+.caption{font-size:.73em;color:var(--color-muted);margin:0 0 var(--space-sm)}
+textarea,select,input[type=text],input[type=password],input[type=url]{display:block;width:100%;min-width:0;border:2px solid var(--color-rule);border-radius:var(--radius-field);background:var(--color-field);color:var(--color-ink);padding:var(--space-sm);line-height:1.6}
+textarea{resize:vertical}
+input[type=text],input[type=password],input[type=url]{font-size:.8em;min-height:50px;padding:var(--space-sm)}
+textarea:hover,select:hover,input:hover{border-color:var(--color-muted)}
+textarea:disabled,select:disabled,input:disabled{background:var(--color-disabled-bg);color:var(--color-disabled-ink);border-color:var(--color-disabled-bg);cursor:not-allowed}
+select{font-size:.83em;margin-bottom:var(--space-2xs)}
+#prompt{font-size:1em;margin-bottom:var(--space-md);min-height:300px;max-height:720px}
+.role-state{font-size:.76em;color:var(--color-accent);margin:var(--space-sm) 0 0;min-height:1.6em}
+
+.panel{border-top:1px solid var(--color-rule);margin-top:var(--space-lg);padding-top:var(--space-md)}
+.panel>summary{cursor:pointer;font-weight:700;min-height:48px;padding:var(--space-xs) 0;display:flex;align-items:center;gap:var(--space-xs)}
+.panel>summary .muted{font-weight:500;color:var(--color-muted);font-size:.82em}
+.panel-body{padding-top:var(--space-2xs)}
+
+.engines{border:0;margin:0 0 var(--space-md);padding:0;display:grid;gap:var(--space-xs)}
+.engines legend{font-size:.85em;font-weight:700;margin-bottom:var(--space-xs);padding:0}
+.engine{display:flex;gap:var(--space-sm);align-items:flex-start;margin:0;font-weight:400;font-size:.8em;border:2px solid var(--color-rule);border-radius:var(--radius-control);padding:var(--space-sm) var(--space-sm);background:var(--color-field);cursor:pointer}
+.engine:hover{border-color:var(--color-muted)}
+.engine:has(input:checked){border-color:var(--color-accent);background:var(--color-accent-soft)}
+.engine:has(input:disabled){background:var(--color-disabled-bg);color:var(--color-disabled-ink);border-color:var(--color-disabled-bg);cursor:not-allowed}
+.engine input{margin:var(--space-xs) 0 0;width:20px;height:20px;flex:none;accent-color:var(--color-accent)}
+.engine strong{display:block;line-height:1.4}
+.engine small{display:block;font-size:.86em;color:var(--color-muted);line-height:1.45;margin-top:2px}
+.engine-fields{display:grid;gap:var(--space-xs);margin-bottom:var(--space-md)}
+.engine-fields label{margin:var(--space-xs) 0 0;font-size:.78em}
+.key-row{display:flex;gap:var(--space-xs)}
+.key-row button{flex:none;font-size:.75em;min-height:50px;padding:var(--space-xs) var(--space-sm)}
+
+.connect-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-xs);margin-top:var(--space-xs)}
+.connect-row button{font-size:.72em;padding:var(--space-xs) var(--space-sm);min-height:44px}
+.status-line{font-size:.74em;color:var(--color-muted);margin:0}
+.status-line[data-connected="true"]{color:var(--color-accent);font-weight:700}
+.model-label{margin-top:var(--space-md)}
+#modelApply,#preload{margin-top:var(--space-sm);font-size:.8em}
+.setup{padding:var(--space-md);margin:var(--space-md) 0 0;font-size:.76em;background:var(--color-warn-bg);border:1px solid var(--color-rule);border-radius:14px}
+.setup h2{font-size:1em}
+.setup p{margin:var(--space-xs) 0 var(--space-sm)}
+.setup button{font-size:.9em;padding:var(--space-xs) var(--space-sm)}
+.buttons{display:flex;flex-wrap:wrap;gap:var(--space-sm)}
+.help{margin-top:var(--space-sm);font-size:.74em}
+.help>summary{cursor:pointer;color:var(--color-accent);font-weight:700;min-height:44px;display:flex;align-items:center}
+.help ol{margin:var(--space-xs) 0 0;padding-left:1.3em;display:grid;gap:var(--space-xs)}
+.help .caption{font-size:.95em;margin-top:var(--space-xs)}
+.model-add{padding-top:var(--space-md);margin-top:var(--space-md);border-top:1px dashed var(--color-rule)}
+.model-add label{font-size:.8em}
+#addModel{margin-top:var(--space-sm);font-size:.8em}
+progress{width:100%;accent-color:var(--color-accent);margin-top:var(--space-sm)}
+#pullText,#modelResult{font-size:.73em;overflow-wrap:anywhere;margin-top:var(--space-xs)}
+#cancelPull{margin-top:var(--space-sm);font-size:.8em}
+
+.drop-zone{border:2px dashed var(--color-rule);border-radius:14px;background:var(--color-drop);padding:var(--space-ml) var(--space-md);text-align:center;display:flex;flex-direction:column;align-items:center;gap:var(--space-sm);cursor:pointer;transition:border-color var(--dur-micro),background-color var(--dur-micro)}
+.drop-zone:hover{border-color:var(--color-muted)}
+.drop-zone.drag{border-color:var(--color-accent);background:var(--color-drop-active)}
+.drop-hint{font-size:.82em;color:var(--color-muted);line-height:1.6}
+.drop-zone button{font-size:.8em;min-height:46px;padding:var(--space-xs) var(--space-md)}
+.knowledge-list{list-style:none;margin:var(--space-md) 0 0;padding:0;display:flex;flex-direction:column;gap:var(--space-xs)}
+.knowledge-list li{display:flex;align-items:center;gap:var(--space-sm);background:var(--color-paper-3);border:1px solid var(--color-rule-soft);border-radius:var(--radius-field);padding:var(--space-xs) var(--space-sm)}
+.k-info{flex:1;min-width:0;line-height:1.35}
+.k-name{display:block;font-size:.78em;overflow-wrap:anywhere}
+.k-size{display:block;font-size:.66em;color:var(--color-muted)}
+.k-remove{flex:none;min-height:44px;width:44px;padding:0;font-size:1.1em;line-height:1;background:var(--color-field);border:1px solid var(--color-rule);color:var(--color-muted);border-radius:9px}
+.k-remove:hover{color:var(--color-danger);border-color:var(--color-danger-rule);filter:none}
+#knowledgeNote{margin-top:var(--space-sm)}
+
+.chat-panel{display:flex;flex-direction:column;min-height:600px;height:calc(100dvh - 120px);min-width:0}
+.chat-heading{display:flex;justify-content:space-between;align-items:center;gap:var(--space-sm);padding:var(--space-ml) var(--space-lg);border-bottom:1px solid var(--color-rule-soft)}
+.chat-heading h2{font-size:1.04em}
+.chat-heading p{font-size:.7em;color:var(--color-muted)}
+.chat-heading button{font-size:.77em;padding:var(--space-xs) var(--space-md)}
+.messages{flex:1;min-height:200px;overflow:auto;padding:var(--space-lg);scroll-behavior:smooth}
+.welcome{padding:var(--space-xl) var(--space-sm);text-align:center;color:var(--color-muted)}
+.welcome h3{color:var(--color-ink);margin:0 0 var(--space-xs);font-size:1.2em}
+.welcome p{margin:0 auto var(--space-xl);max-width:32ch}
+.welcome-icon{display:inline-block;font-size:.75em;background:var(--color-chip);border-radius:30px;padding:var(--space-xs) var(--space-ml);color:var(--color-accent);margin-bottom:var(--space-md)}
+#sample{font-size:.83em;font-weight:500;white-space:normal}
+.message{margin-bottom:var(--space-lg);max-width:94%;overflow-wrap:anywhere}
+.message.user{margin-left:auto}
+.speaker{font-size:.74em;font-weight:700;color:var(--color-muted);margin-bottom:var(--space-2xs)}
+.user .speaker{text-align:right}
+.bubble{white-space:pre-wrap;border-radius:var(--radius-bubble);padding:var(--space-md) var(--space-ml);background:var(--color-paper-3);line-height:1.75}
+.user .bubble{background:var(--color-accent-soft)}
+.incomplete{font-size:.74em;color:var(--color-note);margin-top:var(--space-2xs)}
+.notice{padding:var(--space-sm) var(--space-ml);background:var(--color-warn-bg);color:var(--color-warn-ink);font-size:.84em;display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-xs)}
+.chat-status{font-size:.78em;color:var(--color-accent);padding:0 var(--space-lg);margin:var(--space-xs) 0 0;min-height:1.6em}
+#composer{border-top:1px solid var(--color-rule-soft);padding:var(--space-md) var(--space-lg) var(--space-ml)}
+#message{min-height:85px;max-height:220px;font-size:.94em}
+.send-row{display:flex;align-items:center;justify-content:flex-end;gap:var(--space-sm);margin-top:var(--space-sm)}
+.send-row>span{margin-right:auto;font-size:.66em;color:var(--color-muted)}
+#send,#stop{white-space:nowrap}
+
+dialog{max-width:560px;width:90%;border:1px solid var(--color-rule);border-radius:var(--radius-panel);padding:var(--space-xl);color:var(--color-ink);background:var(--color-paper-2);font:inherit}
+dialog::backdrop{background:var(--color-backdrop)}
+dialog p{margin:var(--space-sm) 0 var(--space-lg)}
+.noscript{max-width:640px;margin:var(--space-xl) auto;padding:var(--space-lg);background:var(--color-warn-bg);color:var(--color-warn-ink);border-radius:var(--radius-panel)}
+
+@media (max-width:940px){
+  .topbar{padding:var(--space-md) var(--space-md) 0}
+  main{padding:var(--space-sm) var(--space-md) var(--space-md)}
+  .workspace{grid-template-columns:300px minmax(0,1fr);gap:var(--space-md)}
+  aside{padding:var(--space-ml)}
+  .chat-heading,#composer,.messages{padding-left:var(--space-md);padding-right:var(--space-md)}
+  .send-row>span{display:none}
+}
+@media (max-width:740px){
+  :root{--base-size:19px}
+  .workspace{grid-template-columns:minmax(0,1fr)}
+  aside{align-self:stretch}
+  #prompt{min-height:220px}
+  .chat-panel{height:80dvh;min-height:520px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<noscript><p class="noscript">쉬운 AI는 자바스크립트가 켜져 있어야 동작합니다. 브라우저 설정에서 자바스크립트를 켠 뒤 다시 열어 주세요.</p></noscript>
+<header class="topbar">
+  <h1 class="wordmark">쉬운 AI</h1>
+  <button id="sidebarToggle" class="light" type="button" aria-controls="sidebar" aria-expanded="true">설정 접기</button>
+</header>
+<main>
+<div id="workspace" class="workspace">
+<aside id="sidebar" aria-label="AI 역할과 연결 설정">
+  <label for="prompt">AI에게 맡길 역할</label>
+  <textarea id="prompt" rows="9" maxlength="4000" placeholder="예: 영어를 쉽게 가르쳐 주세요."></textarea>
+  <button id="apply" class="wide" type="button" disabled>역할 적용</button>
+  <p id="roleState" class="role-state" role="status">이 역할로 대화합니다.</p>
+
+  <details id="knowledgePanel" class="panel">
+    <summary>지식 추가 <span class="muted">(선택)</span></summary>
+    <div class="panel-body">
+      <p class="caption">역할에 더해, AI가 참고할 자료를 넣을 수 있어요. 넣은 자료는 답변에 반영됩니다.</p>
+      <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="지식 파일 넣기. 파일을 끌어다 놓거나 눌러서 고르세요.">
+        <p class="drop-hint"><strong>TXT, PDF 파일</strong>을 여기로<br>끌어다 놓으세요 (여러 개 가능)</p>
+        <button id="pickFiles" class="light" type="button">파일 고르기</button>
+      </div>
+      <input id="fileInput" type="file" accept=".txt,.md,.markdown,.csv,.log,.pdf" multiple hidden>
+      <ul id="knowledgeList" class="knowledge-list" aria-label="넣은 자료 목록"></ul>
+      <p id="knowledgeNote" class="caption" role="status"></p>
+    </div>
+  </details>
+
+  <details id="ollamaPanel" class="panel" open>
+    <summary>AI 연결</summary>
+    <div class="panel-body">
+      <fieldset class="engines">
+        <legend>어떤 AI와 대화할까요?</legend>
+        <label class="engine"><input type="radio" name="engine" value="ollama"><span><strong>내 컴퓨터의 Ollama</strong><small>무료입니다. 이 PC에 Ollama가 설치되어 있어야 합니다.</small></span></label>
+        <label class="engine"><input type="radio" name="engine" value="webllm"><span><strong>브라우저 안의 AI</strong><small>설치가 필요 없습니다. 처음 한 번 AI를 받습니다. Chrome, Edge에서 됩니다.</small></span></label>
+        <label class="engine"><input type="radio" name="engine" value="claude"><span><strong>Claude</strong><small>API 키가 필요합니다. 쓴 만큼 요금이 나옵니다.</small></span></label>
+        <label class="engine"><input type="radio" name="engine" value="openai"><span><strong>OpenAI 호환 서비스</strong><small>OpenAI, OpenRouter, Groq, LM Studio 등. 주소와 키를 넣습니다.</small></span></label>
+      </fieldset>
+
+      <div class="engine-fields" data-engine-fields="ollama">
+        <label for="ollamaUrl">Ollama 주소</label>
+        <input id="ollamaUrl" type="url" autocomplete="off" spellcheck="false" placeholder="http://localhost:11434">
+      </div>
+      <div class="engine-fields" data-engine-fields="webllm">
+        <p class="caption">AI가 이 브라우저 안에서 돌아가서, 대화 내용이 밖으로 나가지 않습니다. 처음 한 번 AI 파일을 받고, 다음부터는 바로 씁니다.</p>
+      </div>
+      <div class="engine-fields" data-engine-fields="claude">
+        <label for="claudeKey">Claude API 키</label>
+        <div class="key-row"><input id="claudeKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-로 시작하는 키"><button id="claudeKeyClear" class="light" type="button">지우기</button></div>
+        <p class="caption">키는 이 브라우저에만 저장되고, Anthropic에만 보내집니다. 키는 Claude Console에서 만들 수 있습니다.</p>
+      </div>
+      <div class="engine-fields" data-engine-fields="openai">
+        <label for="openaiUrl">서비스 주소</label>
+        <input id="openaiUrl" type="url" autocomplete="off" spellcheck="false" placeholder="https://api.openai.com/v1">
+        <label for="openaiKey">API 키</label>
+        <div class="key-row"><input id="openaiKey" type="password" autocomplete="off" spellcheck="false" placeholder="키가 없는 곳은 비워 두세요"><button id="openaiKeyClear" class="light" type="button">지우기</button></div>
+        <p class="caption">키는 이 브라우저에만 저장되고, 위 주소로만 보내집니다.</p>
+      </div>
+
+      <div class="connect-row">
+        <p id="ollamaStatus" class="status-line" role="status">연결 확인 중…</p>
+        <button id="refresh" class="light" type="button">연결 확인</button>
+      </div>
+      <label for="model" class="model-label">대화할 AI</label>
+      <select id="model"><option value="">확인 중…</option></select>
+      <button id="modelApply" class="light wide" type="button" disabled>이 AI 사용</button>
+      <button id="preload" class="light wide" type="button" hidden>선택한 AI 미리 받기</button>
+
+      <section id="setup" class="setup" hidden aria-labelledby="setupTitle">
+        <h2 id="setupTitle">처음 한 번만 준비해 주세요</h2>
+        <p id="setupText"></p>
+        <div class="buttons"><button id="launch" type="button" hidden>Ollama 켜기</button><button id="pull" type="button" hidden>처음 쓰는 AI 받기</button></div>
+        <details id="ollamaHelp" class="help" hidden>
+          <summary>웹에서 Ollama를 쓰도록 설정하기</summary>
+          <ol>
+            <li>Ollama를 설치합니다. <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer">ollama.com/download</a></li>
+            <li>Windows는 명령 프롬프트에 <code>setx OLLAMA_ORIGINS "*"</code> 를 붙여 넣고 Enter를 누릅니다.</li>
+            <li>macOS는 터미널에 <code>launchctl setenv OLLAMA_ORIGINS "*"</code> 를 넣습니다.</li>
+            <li>Ollama를 완전히 끈 뒤(작업 표시줄 아이콘에서 종료) 다시 켭니다.</li>
+            <li>Chrome이나 Edge에서 이 화면을 열고 연결 확인을 누릅니다. 로컬 네트워크 접근을 물으면 허용을 누릅니다.</li>
+          </ol>
+          <p class="caption">"*"는 모든 웹사이트가 내 Ollama를 부를 수 있게 합니다. 이 페이지 주소만 허용하려면 "*" 대신 그 주소를 넣으세요. Safari에서는 동작하지 않습니다.</p>
+        </details>
+      </section>
+
+      <form id="modelAddForm" class="model-add">
+        <label for="modelName" id="modelNameLabel">새 모델 받기</label>
+        <input id="modelName" type="text" maxlength="200" placeholder="예: qwen2.5:0.5b" autocomplete="off" spellcheck="false">
+        <button id="addModel" class="wide" type="submit" disabled>다운로드</button>
+      </form>
+      <div id="pullProgress" hidden><progress id="progress" max="100" aria-label="AI 받기 진행률"></progress><p id="pullText" role="status"></p></div>
+      <button id="cancelPull" class="light wide" type="button" hidden>받기 멈추기</button>
+      <p id="modelResult" class="caption" role="status"></p>
+    </div>
+  </details>
+</aside>
+
+<section class="chat-panel" aria-labelledby="chatTitle">
+  <div class="chat-heading">
+    <div><h2 id="chatTitle">대화</h2><p id="engineName"></p></div>
+    <button id="newChat" class="light" type="button">새 대화</button>
+  </div>
+  <div id="messages" class="messages" role="log" aria-label="대화 내용" aria-live="off" tabindex="0"></div>
+  <div id="notice" class="notice" hidden><span id="noticeText" role="alert"></span><button id="retry" class="text-button" type="button" hidden>다시 보내기</button></div>
+  <p id="status" class="chat-status" role="status"></p>
+  <form id="composer">
+    <textarea id="message" aria-label="대화 입력" rows="2" maxlength="4000" placeholder="여기에 적으세요. 예: 오늘의 영어 인사를 알려 주세요."></textarea>
+    <div class="send-row"><span>Enter로 보내고, Shift+Enter로 줄을 바꿉니다.</span><button id="stop" class="light" type="button" hidden>답변 멈추기</button><button id="send" type="submit" disabled>보내기</button></div>
+  </form>
+</section>
+</div>
+</main>
+
+<dialog id="confirm" aria-labelledby="confirmTitle">
+  <h2 id="confirmTitle">새 대화를 시작할까요?</h2>
+  <p id="confirmText">지금 화면의 대화가 지워집니다.</p>
+  <div class="buttons"><button id="confirmNo" class="light" type="button">그대로 두기</button><button id="confirmYes" type="button">새로 시작하기</button></div>
+</dialog>
+
+<script>
+'use strict';
+/* ── 설정과 저장 ─────────────────────────────────────────────── */
+const STATE_KEY='easy-ai-conversation-v1', ENGINE_KEY='easy-ai-engine-v1';
+const DEFAULT_PROMPT='당신은 친절한 대화 도우미입니다. 한국어 존댓말로 답하세요. 어려운 말은 풀어서 설명하고, 짧고 이해하기 쉬운 문장을 쓰세요. 한 번에 너무 많은 내용을 말하지 마세요.';
+const KNOWLEDGE_BUDGET=6000, PER_FILE_CHARS=40000, MAX_BYTES=25*1024*1024;
+const WEBLLM_URL='https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.86/+esm';
+const PDFJS_BASE='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/';
+const MODEL_NAME=/^[a-zA-Z0-9][a-zA-Z0-9._:/@-]{0,199}$/;
+const ENGINE_LABEL={ollama:'내 컴퓨터의 Ollama',webllm:'브라우저 안의 AI',claude:'Claude',openai:'OpenAI 호환 서비스'};
+
+function loadSettings(){
+  const d={engine:'ollama',ollamaUrl:'http://localhost:11434',openaiUrl:'https://api.openai.com/v1',openaiKey:'',claudeKey:'',custom:{openai:[],claude:[]}};
+  try{
+    const v=JSON.parse(localStorage.getItem(ENGINE_KEY)||'null');
+    if(!v||typeof v!=='object')return d;
+    const s=k=>typeof v[k]==='string'?v[k]:d[k];
+    const list=x=>Array.isArray(x)?x.filter(n=>typeof n==='string'&&MODEL_NAME.test(n)).slice(0,30):[];
+    return {engine:ENGINE_LABEL[v.engine]?v.engine:d.engine,ollamaUrl:s('ollamaUrl'),openaiUrl:s('openaiUrl'),openaiKey:s('openaiKey'),claudeKey:s('claudeKey'),
+      custom:{openai:list(v.custom&&v.custom.openai),claude:list(v.custom&&v.custom.claude)}};
+  }catch{return d;}
+}
+let settings=loadSettings();
+function saveSettings(){try{localStorage.setItem(ENGINE_KEY,JSON.stringify(settings));}catch{}}
+
+function loadState(){
+  const d={prompt:DEFAULT_PROMPT,model:'',fontSize:22,messages:[],knowledge:[]};
+  let v;try{v=JSON.parse(localStorage.getItem(STATE_KEY)||'null');}catch{return d;}
+  if(!v||typeof v!=='object')return d;
+  return {...d,prompt:typeof v.prompt==='string'?v.prompt.slice(0,4000):d.prompt,model:typeof v.model==='string'?v.model:'',
+    messages:Array.isArray(v.messages)?v.messages.filter(m=>m&&['user','assistant'].includes(m.role)&&typeof m.content==='string').slice(-100):[],
+    knowledge:Array.isArray(v.knowledge)?v.knowledge.filter(k=>k&&typeof k.name==='string'&&typeof k.text==='string').slice(0,20):[]};
+}
+
+/* ── 대화 내용 정리 (데스크탑 앱과 같은 규칙) ───────────────────── */
+function buildMessages(prompt,history,knowledge=''){
+  if(typeof prompt!=='string'||prompt.length>4000)throw new Error('AI 역할은 4,000자까지 적어 주세요.');
+  if(!Array.isArray(history)||!history.length||history.length>200)throw new Error('대화 내용을 확인해 주세요.');
+  const clean=history.map(m=>{
+    if(!m||!['user','assistant'].includes(m.role)||typeof m.content!=='string'||!m.content.trim()||m.content.length>12000)
+      throw new Error('대화 내용이 너무 길거나 비어 있습니다.');
+    return {role:m.role,content:m.content};
+  });
+  if(clean.at(-1).role!=='user')throw new Error('보낼 말을 먼저 적어 주세요.');
+  const recent=[];let size=0;
+  for(let i=clean.length-1;i>=0&&recent.length<20;i--){
+    if(size+clean[i].content.length>16000&&recent.length)break;
+    recent.unshift(clean[i]);size+=clean[i].content.length;
+  }
+  while(recent.length>1&&recent[0].role!=='user')recent.shift();
+  let system=prompt.trim()||DEFAULT_PROMPT;
+  if(typeof knowledge==='string'&&knowledge.trim()){
+    let k=knowledge.trim();if(k.length>KNOWLEDGE_BUDGET)k=k.slice(0,KNOWLEDGE_BUDGET);
+    system+='\n\n아래 [참고 자료]는 사용자가 올린 자료입니다. 답변에 필요하면 이 자료를 근거로 삼고, 자료에 없는 내용은 지어내지 마세요.\n\n[참고 자료]\n'+k;
+  }
+  return {system,messages:recent};
+}
+
+/* ── 네트워크 도우미 ───────────────────────────────────────────── */
+async function readLines(response,onLine){
+  if(!response.body)throw new Error('incomplete');
+  const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';
+  try{
+    while(true){
+      const {done,value}=await reader.read();if(done)break;
+      buffer+=decoder.decode(value,{stream:true});let pos;
+      while((pos=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,pos).replace(/\r$/,'');buffer=buffer.slice(pos+1);onLine(line);}
+      if(buffer.length>2000000)throw new Error('Response too large');
+    }
+    buffer+=decoder.decode();if(buffer.trim())onLine(buffer.replace(/\r$/,''));
+  }finally{try{reader.releaseLock();}catch{}}
+}
+async function httpError(response){
+  let message='';
+  try{const d=await response.json();message=typeof d.error==='string'?d.error:(d.error&&d.error.message)||d.message||'';}catch{}
+  const error=new Error(message||'HTTP '+response.status);error.status=response.status;return error;
+}
+function friendly(error,engine){
+  const text=String(error&&error.message||error),status=error&&error.status;
+  if(error&&error.name==='AbortError')return '작업을 멈췄습니다.';
+  if(error&&error.refusal)return 'AI가 이 요청에는 답하지 않았습니다. 다른 말로 물어봐 주세요.';
+  if(/[가-힣]/.test(text))return text;
+  if(status===401||status===403||/api.?key|unauthori|authentication|permission/i.test(text))return 'API 키가 맞지 않습니다. 키를 다시 확인해 주세요.';
+  if(status===429||/rate.?limit|quota|credit|billing/i.test(text))return '요청이 많거나 사용 한도를 넘었습니다. 잠시 뒤 다시 시도하거나 요금 설정을 확인해 주세요.';
+  if(/memory|out of|allocation|VRAM|device.?lost/i.test(text))return '이 컴퓨터에서 실행하기에는 AI가 큽니다. 더 작은 AI를 골라 주세요.';
+  if(status===404||/not found|does not exist|model_not_found/i.test(text))return '선택한 AI를 찾지 못했습니다. 연결 확인을 누른 뒤 AI를 다시 골라 주세요.';
+  if(/failed to fetch|networkerror|load failed|fetch/i.test(text)){
+    return engine==='ollama'?'Ollama에 연결되지 않았습니다. Ollama가 켜져 있는지, 웹에서 쓰도록 설정했는지 확인해 주세요.':
+      '연결하지 못했습니다. 인터넷과 주소를 확인해 주세요. 브라우저에서 바로 부를 수 없는 서비스일 수도 있습니다.';
+  }
+  if(/timeout|timed out/i.test(text))return 'AI의 응답이 오래 걸립니다. 잠시 뒤 다시 보내 주세요.';
+  if(text==='incomplete')return '연결이 끊겼습니다. 다시 보내기를 눌러 주세요.';
+  return '답변을 받지 못했습니다. 잠시 뒤 다시 보내 주세요. 계속되면 다른 AI를 골라 주세요.';
+}
+const trimUrl=u=>String(u||'').trim().replace(/\/+$/,'');
+
+/* ── AI 엔진들 ─────────────────────────────────────────────────── */
+const providers={
+  ollama:{
+    base(){return trimUrl(settings.ollamaUrl)||'http://localhost:11434';},
+    async models(){
+      let r;
+      try{r=await fetch(this.base()+'/api/tags',{signal:AbortSignal.timeout(5000)});}
+      catch{return {ok:false,models:[],help:true,message:'Ollama가 응답하지 않습니다. 이 컴퓨터에서 Ollama를 켜고, 아래 설정을 한 번 해 주세요.'};}
+      if(!r.ok)return {ok:false,models:[],help:true,message:friendly(await httpError(r),'ollama')};
+      const d=await r.json();
+      const models=(d.models||[]).filter(m=>m&&typeof m.name==='string'&&!m.remote_host&&!m.remote_model&&!m.name.endsWith('-cloud')).map(m=>({name:m.name}));
+      return {ok:true,canPull:true,starter:'qwen2.5:1.5b',preferred:['gemma3:1b','qwen2.5:1.5b'],models};
+    },
+    async chat(p,signal,emit){
+      const {system,messages}=buildMessages(p.prompt,p.history,p.knowledge);
+      const has=!!(p.knowledge&&p.knowledge.trim());
+      const r=await fetch(this.base()+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal,
+        body:JSON.stringify({model:p.model,messages:[{role:'system',content:system},...messages],stream:true,options:{num_ctx:has?8192:4096,num_predict:768}})});
+      if(!r.ok)throw await httpError(r);
+      let done=false;
+      await readLines(r,line=>{
+        if(!line.trim())return;const it=JSON.parse(line);
+        if(it.error)throw new Error(it.error);
+        if(it.message&&it.message.content)emit({type:'token',text:it.message.content});
+        else if(it.message&&it.message.thinking)emit({type:'thinking'});
+        if(it.done===true)done=true;
+      });
+      if(!done)throw new Error('incomplete');
+    },
+    async pull(model,signal,emit){
+      const r=await fetch(this.base()+'/api/pull',{method:'POST',headers:{'Content-Type':'application/json'},signal,body:JSON.stringify({model,stream:true})});
+      if(!r.ok)throw await httpError(r);
+      let done=false;
+      await readLines(r,line=>{
+        if(!line.trim())return;const it=JSON.parse(line);
+        if(it.error)throw new Error(it.error);
+        if(it.status==='success')done=true;
+        emit({type:'download',completed:it.completed||0,total:it.total||0,stage:it.status==='success'?'완료':it.total?'AI를 받고 있습니다':'AI 파일을 확인하고 있습니다'});
+      });
+      if(!done)throw new Error('incomplete');
+    }
+  },
+
+  openai:{
+    base(){return trimUrl(settings.openaiUrl)||'https://api.openai.com/v1';},
+    headers(){const h={'Content-Type':'application/json'};const k=settings.openaiKey.trim();if(k)h.Authorization='Bearer '+k;return h;},
+    async models(){
+      const skip=/embed|tts|whisper|dall-e|moderation|image|audio|realtime|transcri|search|davinci|babbage|computer-use/i;
+      let list=[],error=null;
+      try{
+        const r=await fetch(this.base()+'/models',{headers:this.headers(),signal:AbortSignal.timeout(8000)});
+        if(!r.ok)throw await httpError(r);
+        const d=await r.json();
+        list=(d.data||d.models||[]).map(m=>m&&(m.id||m.name)).filter(id=>typeof id==='string'&&!skip.test(id)).sort();
+      }catch(e){error=e;}
+      const names=[...new Set([...settings.custom.openai,...list])];
+      if(error&&!names.length)return {ok:false,canAdd:true,models:[],message:friendly(error,'openai')+' 모델 이름을 아래에 직접 넣어도 됩니다.'};
+      return {ok:true,canAdd:true,preferred:['gpt-4.1-mini','gpt-4o-mini'],models:names.map(name=>({name}))};
+    },
+    async chat(p,signal,emit){
+      const {system,messages}=buildMessages(p.prompt,p.history,p.knowledge);
+      const r=await fetch(this.base()+'/chat/completions',{method:'POST',headers:this.headers(),signal,
+        body:JSON.stringify({model:p.model,stream:true,messages:[{role:'system',content:system},...messages]})});
+      if(!r.ok)throw await httpError(r);
+      let done=false,any=false;
+      await readLines(r,line=>{
+        if(!line.startsWith('data:'))return;
+        const data=line.slice(5).trim();
+        if(data==='[DONE]'){done=true;return;}
+        const it=JSON.parse(data);
+        if(it.error)throw new Error(it.error.message||'error');
+        const c=it.choices&&it.choices[0],d=(c&&c.delta)||{};
+        if(d.content){any=true;emit({type:'token',text:d.content});}
+        else if(d.reasoning_content||d.reasoning)emit({type:'thinking'});
+        if(c&&c.finish_reason)done=true;
+      });
+      if(!done&&!any)throw new Error('incomplete');
+    }
+  },
+
+  claude:{
+    base:'https://api.anthropic.com/v1',
+    effort:/^claude-(opus|sonnet|haiku|fable|mythos)-5|^claude-(opus|sonnet)-4-[6-9]/,
+    fallback:['claude-fable-5-2','claude-fable-5-1','claude-opus-5-5','claude-opus-5','claude-sonnet-5-5'],
+    headers(beta){
+      const h={'Content-Type':'application/json','x-api-key':settings.claudeKey.trim(),'anthropic-version':'2026-10-21','anthropic-dangerous-direct-browser-access':'true'};
+      if(beta)h['anthropic-beta']=beta;return h;
+    },
+    async models(){
+      if(!settings.claudeKey.trim())return {ok:false,needsKey:true,models:[],message:'위 칸에 Claude API 키를 넣어 주세요.'};
+      let list=[],error=null;
+      try{
+        const r=await fetch(this.base+'/models?limit=100',{headers:this.headers(),signal:AbortSignal.timeout(8000)});
+        if(!r.ok)throw await httpError(r);
+        const d=await r.json();
+        list=(d.data||[]).map(m=>m&&m.id).filter(id=>typeof id==='string');
+      }catch(e){error=e;}
+      const names=[...new Set([...list,...settings.custom.claude])];
+      if(error&&(!names.length||error.status===401||error.status===403))return {ok:false,canAdd:true,models:[],message:friendly(error,'claude')};
+      return {ok:true,canAdd:true,preferred:['claude-opus-5-5'],models:names.map(name=>({name}))};
+    },
+    async chat(p,signal,emit){
+      const {system,messages}=buildMessages(p.prompt,p.history,p.knowledge);
+      const body={model:p.model,max_tokens:8000,system,messages,stream:true};
+      if(this.effort.test(p.model))body.output_config={effort:'low'};
+      const useFallback=this.fallback.includes(p.model);
+      if(useFallback)body.fallbacks='default';
+      const r=await fetch(this.base+'/messages',{method:'POST',headers:this.headers(useFallback?'server-side-fallback-2026-07-01':''),signal,body:JSON.stringify(body)});
+      if(!r.ok)throw await httpError(r);
+      let done=false,any=false,stop='';
+      await readLines(r,line=>{
+        if(!line.startsWith('data:'))return;
+        const ev=JSON.parse(line.slice(5).trim());
+        if(ev.type==='content_block_start'&&ev.content_block&&/thinking/.test(ev.content_block.type))emit({type:'thinking'});
+        else if(ev.type==='content_block_delta'&&ev.delta&&ev.delta.type==='text_delta'&&ev.delta.text){any=true;emit({type:'token',text:ev.delta.text});}
+        else if(ev.type==='message_delta'&&ev.delta&&ev.delta.stop_reason)stop=ev.delta.stop_reason;
+        else if(ev.type==='message_stop')done=true;
+        else if(ev.type==='error')throw Object.assign(new Error((ev.error&&ev.error.message)||'error'),{status:ev.error&&ev.error.type==='overloaded_error'?429:undefined});
+      });
+      if(stop==='refusal'&&!any)throw Object.assign(new Error('refusal'),{refusal:true});
+      if(!done)throw new Error('incomplete');
+    }
+  },
+
+  webllm:{
+    lib:null,engine:null,loaded:'',
+    catalog:[
+      {name:'Qwen2.5-1.5B-Instruct-q4f16_1-MLC',label:'Qwen 2.5 1.5B (권장)'},
+      {name:'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',label:'Qwen 2.5 0.5B (가장 가벼움)'},
+      {name:'Qwen2.5-3B-Instruct-q4f16_1-MLC',label:'Qwen 2.5 3B (더 똑똑하지만 무거움)'},
+      {name:'gemma-2-2b-it-q4f16_1-MLC',label:'Gemma 2 2B'},
+      {name:'Llama-3.2-1B-Instruct-q4f16_1-MLC',label:'Llama 3.2 1B (영어에 강함)'}
+    ],
+    async models(){
+      const no={ok:false,models:[],message:'이 브라우저에서는 브라우저 안의 AI를 쓸 수 없습니다. 최신 Chrome이나 Edge로 열어 주세요. 그래도 안 되면 다른 연결 방법을 골라 주세요.'};
+      if(!navigator.gpu)return no;
+      let adapter=null;try{adapter=await navigator.gpu.requestAdapter();}catch{}
+      if(!adapter)return no;
+      return {ok:true,canPreload:true,preferred:[this.catalog[0].name],models:this.catalog};
+    },
+    async load(model,onProgress){
+      if(this.engine&&this.loaded===model)return;
+      if(!this.lib)this.lib=await import(WEBLLM_URL);
+      if(this.engine){try{await this.engine.unload();}catch{}this.engine=null;this.loaded='';}
+      this.engine=await this.lib.CreateMLCEngine(model,{initProgressCallback:r=>onProgress(Math.min(100,Math.floor((r.progress||0)*100)))});
+      this.loaded=model;
+    },
+    async chat(p,signal,emit){
+      const {system,messages}=buildMessages(p.prompt,p.history,p.knowledge);
+      if(!(this.engine&&this.loaded===p.model)){
+        emit({type:'loading',text:'AI를 불러오고 있습니다. 처음에는 몇 분 걸릴 수 있어요.'});
+        await this.load(p.model,pct=>emit({type:'loading',text:'AI를 불러오고 있습니다 ('+pct+'%). 처음에는 몇 분 걸릴 수 있어요.'}));
+      }
+      if(signal.aborted)throw new DOMException('aborted','AbortError');
+      const engine=this.engine,onAbort=()=>{try{engine.interruptGenerate();}catch{}};
+      signal.addEventListener('abort',onAbort);
+      try{
+        const stream=await engine.chat.completions.create({messages:[{role:'system',content:system},...messages],stream:true,max_tokens:768});
+        for await(const chunk of stream){const t=chunk.choices&&chunk.choices[0]&&chunk.choices[0].delta&&chunk.choices[0].delta.content;if(t)emit({type:'token',text:t});}
+      }finally{signal.removeEventListener('abort',onAbort);}
+      if(signal.aborted)throw new DOMException('aborted','AbortError');
+    },
+    async pull(model,signal,emit){
+      await this.load(model,pct=>emit({type:'download',completed:pct,total:100,stage:'AI를 받고 있습니다'}));
+      emit({type:'download',completed:100,total:100,stage:'완료'});
+    }
+  }
+};
+
+/* ── 데스크탑 앱과 같은 모양의 API (화면 코드는 그대로 씀) ─────── */
+const api=(()=>{
+  let listener=()=>{},active=null;
+  function run(kind,payload,work){
+    if(active)throw new Error('진행 중인 작업을 먼저 멈춰 주세요.');
+    const engine=settings.engine;
+    const job={id:payload.id,controller:new AbortController(),timedOut:false};active=job;
+    let timer;
+    const arm=ms=>{clearTimeout(timer);timer=setTimeout(()=>{job.timedOut=true;job.controller.abort();},ms);};
+    arm(kind==='chat'?300000:180000);
+    const emit=value=>{arm(180000);listener({id:job.id,...value});};
+    (async()=>{
+      try{await work(job.controller.signal,emit);listener({id:job.id,type:'done'});}
+      catch(error){
+        const stopped=job.controller.signal.aborted&&!job.timedOut;
+        listener({id:job.id,type:stopped?'stopped':'error',
+          message:job.timedOut?'응답이 오래 걸려 멈췄습니다. 다시 시도해 주세요.':
+            kind==='pull'?(engine==='webllm'?'AI를 받지 못했습니다. '+friendly(error,engine):'AI를 받지 못했습니다. 모델 이름과 인터넷 연결, 저장 공간을 확인해 주세요.'):friendly(error,engine)});
+      }finally{clearTimeout(timer);if(active===job)active=null;}
+    })();
+    return {id:job.id};
+  }
+  return {
+    load:async()=>loadState(),
+    save:async value=>{localStorage.setItem(STATE_KEY,JSON.stringify({...value,messages:value.messages.slice(-100)}));return {ok:true};},
+    models:async()=>providers[settings.engine].models(),
+    launch:async()=>({ok:false,message:'시작 메뉴에서 Ollama를 실행한 뒤 연결 확인을 눌러 주세요.'}),
+    chat:async payload=>run('chat',payload,(signal,emit)=>providers[settings.engine].chat(payload,signal,emit)),
+    pull:async payload=>run('pull',payload,(signal,emit)=>providers[settings.engine].pull(payload.model,signal,emit)),
+    readFile:readKnowledgeFile,
+    stop:async()=>{if(active)active.controller.abort();return {ok:true};},
+    onEvent:callback=>{listener=callback;return ()=>{listener=()=>{};};}
+  };
+})();
+
+/* ── 지식 파일 읽기 (TXT는 바로, PDF는 pdf.js로) ─────────────────── */
+function decodeText(bytes){
+  const u8=new Uint8Array(bytes);
+  let text=new TextDecoder('utf-8',{fatal:false}).decode(u8);
+  const bad=(text.match(/�/g)||[]).length;
+  if(bad>3&&bad>text.length*0.002){
+    try{const alt=new TextDecoder('euc-kr',{fatal:false}).decode(u8);if((alt.match(/�/g)||[]).length<bad)text=alt;}catch{}
+  }
+  return text;
+}
+let pdfjsPromise=null;
+async function extractPdf(bytes){
+  if(!pdfjsPromise)pdfjsPromise=import(PDFJS_BASE+'pdf.min.mjs').then(lib=>{lib.GlobalWorkerOptions.workerSrc=PDFJS_BASE+'pdf.worker.min.mjs';return lib;});
+  const pdfjs=await pdfjsPromise;
+  const doc=await pdfjs.getDocument({data:new Uint8Array(bytes),isEvalSupported:false,disableFontFace:true,verbosity:0}).promise;
+  const parts=[];
+  for(let p=1;p<=Math.min(doc.numPages,200);p++){
+    const content=await (await doc.getPage(p)).getTextContent();
+    let line='';const chunks=[];
+    for(const item of content.items){
+      if(typeof item.str!=='string')continue;
+      line+=item.str;
+      if(item.hasEOL){chunks.push(line);line='';}
+      else if(item.str&&!item.str.endsWith(' '))line+=' ';
+    }
+    if(line.trim())chunks.push(line);
+    const pageText=chunks.join('\n').replace(/[ \t]+\n/g,'\n').trim();
+    if(pageText)parts.push(pageText);
+    if(parts.join('\n').length>PER_FILE_CHARS*1.5)break;
+  }
+  try{await doc.destroy();}catch{}
+  return parts.join('\n\n');
+}
+async function readKnowledgeFile(payload){
+  const name=String(payload&&payload.name||'');const bytes=payload&&payload.bytes;
+  const size=bytes?bytes.byteLength:0;
+  if(!size)return {ok:false,message:'빈 파일입니다.'};
+  if(size>MAX_BYTES)return {ok:false,message:'파일이 너무 큽니다. 25MB 이하 파일만 넣어 주세요.'};
+  let text;
+  if(/\.pdf$/i.test(name)){
+    try{text=await extractPdf(bytes);}catch{return {ok:false,message:'이 PDF에서 글자를 읽지 못했습니다. 인터넷 연결을 확인하거나, 스캔한 그림 PDF인지 확인해 주세요.'};}
+    if(!text||!text.trim())return {ok:false,message:'이 PDF에는 읽을 수 있는 글자가 없습니다. 스캔본일 수 있어요.'};
+  }else{
+    text=decodeText(bytes);
+    if(!text||!text.trim())return {ok:false,message:'이 파일에는 글자가 없습니다.'};
+  }
+  text=text.replace(/\r\n?/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+  const truncated=text.length>PER_FILE_CHARS;if(truncated)text=text.slice(0,PER_FILE_CHARS);
+  return {ok:true,name,text,chars:text.length,truncated};
+}
+
+/* ── 화면 (데스크탑 앱 app.js를 옮겨 옴) ───────────────────────── */
+function newId(){return globalThis.crypto&&crypto.randomUUID?crypto.randomUUID():'chat-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);}
+const $=id=>document.getElementById(id);
+let state={prompt:DEFAULT_PROMPT,model:'',fontSize:22,messages:[],knowledge:[]};
+let connected=false,caps={},starterModel='';
+let ready=false,models=[],busy='',job=null,lastRequest=null,saveTimer=null,confirmAction=null,connectGeneration=0;
+
+function setNotice(text='',retry=false){$('notice').hidden=!text;$('noticeText').textContent=text;$('retry').hidden=!retry;}
+function dirty(){return $('prompt').value.trim()!==state.prompt.trim()||(!!$('model').value&&$('model').value!==state.model);}
+function controls(){
+  const changed=dirty(),eng=settings.engine;
+  $('send').disabled=!ready||!!busy||changed||!$('message').value.trim();
+  $('stop').hidden=busy!=='chat';$('stop').disabled=false;
+  $('apply').disabled=!!busy||!ready;$('newChat').disabled=!!busy||!state.messages.length;
+  $('modelApply').disabled=!!busy||!ready||$('model').value===state.model;
+  $('model').disabled=!!busy||!models.length;$('prompt').disabled=!!busy;
+  $('retry').disabled=!!busy||changed||!ready;
+  const canAdd=eng==='ollama'?connected:!!caps.canAdd;
+  $('addModel').disabled=!!busy||!canAdd||!$('modelName').value.trim();
+  $('modelName').disabled=!!busy;
+  $('pickFiles').disabled=!!busy;
+  document.querySelectorAll('.k-remove').forEach(b=>b.disabled=!!busy);
+  document.querySelectorAll('input[name=engine]').forEach(r=>r.disabled=!!busy);
+  ['ollamaUrl','openaiUrl','openaiKey','claudeKey','openaiKeyClear','claudeKeyClear'].forEach(id=>$(id).disabled=!!busy);
+  $('pull').disabled=!!busy;$('launch').disabled=!!busy;$('refresh').disabled=!!busy;
+  $('preload').hidden=!caps.canPreload;$('preload').disabled=!!busy||!models.length||providers.webllm.loaded===$('model').value;
+  $('roleState').textContent=changed?'바뀐 내용이 있습니다. 적용 버튼을 눌러 주세요.':'이 역할로 대화합니다.';
+}
+function save(){clearTimeout(saveTimer);return api.save(state).catch(()=>setNotice('대화를 저장하지 못했습니다. 브라우저 저장 공간을 확인해 주세요. 넣은 자료가 많으면 일부를 빼 주세요.'));}
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,300);}
+function renderMessages(){
+  const area=$('messages');const previousScroll=area.scrollTop;const nearBottom=area.scrollHeight-area.scrollTop-area.clientHeight<100;
+  area.replaceChildren();
+  if(!state.messages.length){
+    const welcome=document.createElement('div');welcome.className='welcome';
+    const greeting=document.createElement('div');greeting.className='welcome-icon';greeting.textContent='안녕하세요';
+    const title=document.createElement('h3');title.textContent='무엇이 궁금하세요?';
+    const p=document.createElement('p');p.textContent='아래 칸에 말을 적고 보내기를 눌러 보세요.';
+    const sample=document.createElement('button');sample.type='button';sample.className='light';sample.id='sample';
+    sample.textContent='“AI가 뭔지 쉽게 알려 주세요”';sample.onclick=()=>{$('message').value='AI가 뭔지 쉽게 알려 주세요.';$('message').focus();controls();};
+    welcome.append(greeting,title,p,sample);area.append(welcome);return;
+  }
+  state.messages.forEach(m=>{
+    const item=document.createElement('article');item.className='message '+m.role;
+    const who=document.createElement('div');who.className='speaker';who.textContent=m.role==='user'?'나':'AI';
+    const bubble=document.createElement('div');bubble.className='bubble';bubble.textContent=m.content||'답변을 준비하고 있습니다…';
+    item.append(who,bubble);
+    if(m.interrupted){const note=document.createElement('div');note.className='incomplete';note.textContent='중간에 멈춘 답변입니다.';item.append(note);}
+    area.append(item);
+  });
+  area.scrollTop=nearBottom||busy==='chat'&&!(job&&job.received)?area.scrollHeight:previousScroll;
+}
+function showEngine(){
+  const eng=settings.engine;
+  document.querySelectorAll('input[name=engine]').forEach(r=>r.checked=r.value===eng);
+  document.querySelectorAll('[data-engine-fields]').forEach(el=>el.hidden=el.dataset.engineFields!==eng);
+  $('ollamaUrl').value=settings.ollamaUrl;$('openaiUrl').value=settings.openaiUrl;
+  $('openaiKey').value=settings.openaiKey;$('claudeKey').value=settings.claudeKey;
+  $('modelAddForm').hidden=eng==='webllm';
+  $('modelNameLabel').textContent=eng==='ollama'?'새 모델 받기':'모델 이름 직접 넣기';
+  $('addModel').textContent=eng==='ollama'?'다운로드':'목록에 추가';
+  $('modelName').placeholder=eng==='ollama'?'예: qwen2.5:0.5b':eng==='claude'?'예: claude-haiku-5-5':'예: gpt-4.1-mini';
+  $('engineName').textContent=ENGINE_LABEL[eng];
+  $('modelResult').textContent='';
+}
+async function checkConnection(){
+  const generation=++connectGeneration,eng=settings.engine;
+  $('ollamaStatus').textContent='연결 확인 중…';$('ollamaStatus').dataset.connected='false';$('refresh').disabled=true;
+  let result;
+  try{result=await providers[eng].models();}catch(error){result={ok:false,models:[],message:friendly(error,eng)};}
+  if(generation!==connectGeneration||eng!==settings.engine)return;
+  caps=result;connected=!!result.ok;starterModel=result.starter||'';
+  models=result.models||[];ready=connected&&!!models.length;
+  $('ollamaStatus').textContent=!connected?'연결 안 됨':models.length?'연결됨':'연결됨, 아직 AI가 없습니다';
+  $('ollamaStatus').dataset.connected=String(connected);
+  $('setup').hidden=ready;$('launch').hidden=true;
+  $('pull').hidden=!(connected&&result.canPull&&!models.length);
+  $('ollamaHelp').hidden=!(eng==='ollama'&&!connected);
+  if(!connected){
+    $('setupTitle').textContent=eng==='ollama'?'Ollama 연결이 필요합니다':result.needsKey?'API 키를 넣어 주세요':eng==='webllm'?'이 브라우저에서는 쓸 수 없어요':'연결하지 못했습니다';
+    $('setupText').textContent=result.message||'연결하지 못했습니다.';
+  }else if(!models.length){
+    $('setupTitle').textContent='대화할 AI를 준비해 주세요';
+    $('setupText').textContent=eng==='ollama'?'Ollama는 연결됐지만 대화할 AI가 아직 없습니다. 아래 버튼으로 작은 AI를 한 번 받아 주세요. 인터넷이 필요합니다.':
+      '모델 목록을 받지 못했습니다. 아래에 모델 이름을 직접 넣어 주세요.';
+  }
+  const currentDraft=$('model').value;
+  $('model').replaceChildren();
+  if(!models.length){const option=document.createElement('option');option.value='';option.textContent='연결한 뒤 고를 수 있습니다';$('model').append(option);}
+  for(const model of models){const option=document.createElement('option');option.value=model.name;option.textContent=model.label||model.name;$('model').append(option);}
+  if(models.length){
+    const pick=n=>models.find(m=>m.name===n);
+    const chosen=pick(currentDraft)||pick(state.model)||(result.preferred||[]).map(pick).find(Boolean)||models[0];
+    $('model').value=chosen.name;
+    if(!pick(state.model)&&!state.messages.length){state.model=chosen.name;await save();}
+  }
+  controls();
+}
+function ask(title,text,action){
+  $('confirmTitle').textContent=title;$('confirmText').textContent=text;confirmAction=action;
+  $('confirm').showModal();$('confirmNo').focus();
+}
+function closeConfirm(run){const action=confirmAction;confirmAction=null;$('confirm').close();if(run&&action)action();}
+function applyRole(){
+  if(busy||!ready)return;
+  const prompt=$('prompt').value.trim(),model=$('model').value;
+  const apply=()=>{state.prompt=prompt;state.model=model;state.messages=[];lastRequest=null;
+    renderMessages();setNotice();$('status').textContent='새 설정을 적용했습니다. 이제 말을 걸어 보세요.';save();controls();$('message').focus();};
+  if(state.messages.length&&dirty())ask('새 설정으로 대화할까요?','역할이나 AI를 바꾸면 지금 화면의 대화는 지워지고 새 대화를 시작합니다.',apply);
+  else if(dirty()||!state.messages.length)apply();
+  else $('roleState').textContent='이미 이 역할로 대화하고 있습니다.';
+}
+async function send(textOverride){
+  if(!ready||busy||dirty())return;
+  const text=(textOverride??$('message').value).trim();if(!text)return;
+  if(text.length>4000){setNotice('한 번에 4,000자까지 보낼 수 있습니다.');return;}
+  const before=state.messages.filter(m=>m.content).slice(-98);
+  lastRequest={text,before:structuredClone(before)};
+  state.messages=[...before,{role:'user',content:text},{role:'assistant',content:''}];
+  const id=newId();job={id,index:state.messages.length-1,received:false};busy='chat';
+  if(textOverride===undefined)$('message').value='';
+  setNotice();$('status').textContent='AI가 답변을 준비하고 있습니다. 처음에는 시간이 걸릴 수 있어요.';
+  renderMessages();controls();save();
+  try{await api.chat({id,model:state.model,prompt:state.prompt,knowledge:knowledgeText(),history:[...before.filter(m=>!m.interrupted),{role:'user',content:text}]});}
+  catch(error){finish('error',String(error.message||error));}
+}
+function finish(type,message){
+  const kind=busy;
+  if(kind==='chat'&&job){
+    const answer=state.messages[job.index];
+    if(answer){
+      if(!answer.content){state.messages.splice(job.index,1);if(type==='done'){type='error';message='AI의 답변이 비어 있습니다. 다시 보내기를 눌러 주세요.';}}
+      else if(type!=='done')answer.interrupted=true;
+    }
+    if(type==='done'){$('status').textContent='답변이 끝났습니다. 이어서 이야기해 보세요.';lastRequest=null;}
+    else{$('status').textContent=type==='stopped'?'답변을 멈췄습니다.':'답변을 받지 못했습니다.';
+      setNotice(type==='stopped'?'답변을 멈췄습니다. 다시 보내거나 다른 말을 적어 주세요.':message||'다시 보내기를 눌러 주세요.',true);}
+    renderMessages();save();
+  }else if(kind==='pull'){
+    $('cancelPull').hidden=true;$('pullProgress').hidden=true;
+    $('modelResult').textContent=type==='done'?job.model+' 받기 완료':type==='stopped'?'받기를 멈췄습니다.':'받기 실패. 모델 이름과 연결을 확인해 주세요.';
+    if(type!=='done')setNotice(type==='stopped'?'AI 받기를 멈췄습니다. 나중에 다시 받을 수 있습니다.':message||'AI를 받지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.');
+  }
+  busy='';job=null;controls();
+  if(kind==='pull'&&settings.engine==='ollama')checkConnection();
+}
+api.onEvent(event=>{
+  if(!job||event.id!==job.id)return;
+  if(event.type==='token'&&busy==='chat'){
+    state.messages[job.index].content+=event.text;job.received=true;
+    $('status').textContent='답변을 쓰고 있습니다…';renderMessages();scheduleSave();
+  }else if(event.type==='thinking')$('status').textContent='AI가 생각하고 있습니다. 잠시 기다려 주세요.';
+  else if(event.type==='loading')$('status').textContent=event.text;
+  else if(event.type==='download'){
+    if(event.total){const pct=Math.min(100,Math.floor(event.completed/event.total*100));$('progress').value=pct;$('pullText').textContent=event.stage+' ('+pct+'%)';}
+    else{$('progress').removeAttribute('value');$('pullText').textContent=event.stage;}
+  }else if(['done','error','stopped'].includes(event.type))finish(event.type,event.message);
+});
+$('composer').addEventListener('submit',event=>{event.preventDefault();send();});
+$('message').addEventListener('input',controls);
+$('message').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing&&event.keyCode!==229){event.preventDefault();send();}});
+$('prompt').addEventListener('input',controls);$('model').addEventListener('change',controls);
+$('apply').onclick=applyRole;
+$('modelApply').onclick=applyRole;
+$('newChat').onclick=()=>{if(busy)return;ask('새 대화를 시작할까요?','지금 화면의 대화가 지워집니다. AI 역할은 그대로 사용합니다.',()=>{
+  state.messages=[];lastRequest=null;$('prompt').value=state.prompt;if(models.some(m=>m.name===state.model))$('model').value=state.model;
+  setNotice();$('status').textContent='새 대화를 시작합니다.';renderMessages();save();controls();$('message').focus();});};
+$('confirmNo').onclick=()=>closeConfirm(false);$('confirmYes').onclick=()=>closeConfirm(true);
+$('confirm').addEventListener('cancel',()=>{confirmAction=null;});
+$('retry').onclick=()=>{if(busy||dirty()||!ready||!lastRequest)return;const request=lastRequest;state.messages=structuredClone(request.before);send(request.text);};
+$('stop').onclick=async()=>{$('stop').disabled=true;$('status').textContent='답변을 멈추고 있습니다…';try{await api.stop();}catch{finish('error','작업을 멈추지 못했습니다.');}};
+$('refresh').onclick=()=>checkConnection();
+$('launch').onclick=async()=>{const result=await api.launch();if(!result.ok)setNotice(result.message);};
+
+async function downloadModel(model){
+  if(busy||!connected)return;
+  if(!MODEL_NAME.test(model)){$('modelResult').textContent='모델 이름을 확인해 주세요.';return;}
+  busy='pull';job={id:newId(),model};setNotice();$('modelResult').textContent='';
+  $('pullProgress').hidden=false;$('cancelPull').hidden=settings.engine==='webllm';
+  $('pullText').textContent=model+' 받는 중…';$('progress').removeAttribute('value');controls();
+  try{await api.pull({id:job.id,model});}catch(error){finish('error',String(error.message||error));}
+}
+function addCustomModel(name){
+  if(!MODEL_NAME.test(name)){$('modelResult').textContent='모델 이름을 확인해 주세요.';return;}
+  const list=settings.custom[settings.engine];
+  if(!list.includes(name))list.unshift(name);
+  settings.custom[settings.engine]=list.slice(0,30);saveSettings();
+  $('modelName').value='';$('modelResult').textContent=name+'을(를) 목록에 넣었습니다.';
+  checkConnection().then(()=>{if(models.some(m=>m.name===name)){$('model').value=name;controls();}});
+}
+$('pull').onclick=()=>downloadModel(starterModel);
+$('preload').onclick=()=>downloadModel($('model').value);
+$('modelName').addEventListener('input',controls);
+$('modelAddForm').addEventListener('submit',event=>{event.preventDefault();const name=$('modelName').value.trim();
+  if(settings.engine==='ollama')downloadModel(name);else addCustomModel(name);});
+$('cancelPull').onclick=()=>api.stop();
+try{$('ollamaPanel').open=localStorage.getItem('easy-ai-ollama-panel')!=='closed';}catch{}
+$('ollamaPanel').addEventListener('toggle',()=>{try{localStorage.setItem('easy-ai-ollama-panel',$('ollamaPanel').open?'open':'closed');}catch{}});
+
+/* 엔진 고르기와 주소, 키 */
+document.querySelectorAll('input[name=engine]').forEach(radio=>radio.addEventListener('change',()=>{
+  if(busy||!radio.checked)return;
+  settings.engine=radio.value;saveSettings();showEngine();
+  models=[];ready=false;caps={};controls();checkConnection();
+}));
+[['ollamaUrl','ollamaUrl'],['openaiUrl','openaiUrl'],['openaiKey','openaiKey'],['claudeKey','claudeKey']].forEach(([id,key])=>{
+  $(id).addEventListener('change',()=>{settings[key]=$(id).value.trim();saveSettings();checkConnection();});
+});
+[['openaiKeyClear','openaiKey'],['claudeKeyClear','claudeKey']].forEach(([id,key])=>{
+  $(id).onclick=()=>{settings[key]='';$(key).value='';saveSettings();checkConnection();$(key).focus();};
+});
+
+/* ── 지식 추가 (참고 자료) ─────────────────────────────────────── */
+const KNOWLEDGE_MAX_FILES=20,KNOWLEDGE_TOTAL_WARN=6000;
+function knowledgeText(){return (state.knowledge||[]).map(k=>'### '+k.name+'\n'+k.text).join('\n\n');}
+function knowledgeTotal(){return (state.knowledge||[]).reduce((n,k)=>n+(k.chars||k.text.length),0);}
+function renderKnowledge(){
+  const list=$('knowledgeList');list.replaceChildren();
+  (state.knowledge||[]).forEach((k,i)=>{
+    const li=document.createElement('li');
+    const info=document.createElement('span');info.className='k-info';
+    const name=document.createElement('span');name.className='k-name';name.textContent=k.name;
+    const chars=k.chars||k.text.length;
+    const sizeEl=document.createElement('span');sizeEl.className='k-size';sizeEl.textContent=chars.toLocaleString('ko-KR')+'자'+(k.truncated?', 앞부분만 넣음':'');
+    info.append(name,sizeEl);
+    const del=document.createElement('button');del.type='button';del.className='k-remove';del.textContent='×';
+    del.setAttribute('aria-label',k.name+' 빼기');del.dataset.index=String(i);del.disabled=!!busy;
+    li.append(info,del);list.append(li);
+  });
+  const note=$('knowledgeNote');const n=(state.knowledge||[]).length;
+  if(!n)note.textContent='';
+  else{const total=knowledgeTotal();
+    note.textContent='자료 '+n+'개, 약 '+total.toLocaleString('ko-KR')+'자.'+(total>KNOWLEDGE_TOTAL_WARN?' 자료가 많아 앞부분 위주로 반영됩니다.':'');}
+}
+async function addFiles(fileList){
+  if(busy){setNotice('작업이 끝난 뒤 자료를 넣어 주세요.');return;}
+  const files=[...(fileList||[])];if(!files.length)return;
+  $('knowledgeNote').textContent='자료를 읽고 있어요…';
+  let added=0;const failed=[];
+  for(const file of files){
+    if((state.knowledge||[]).length>=KNOWLEDGE_MAX_FILES){failed.push(file.name+' (최대 '+KNOWLEDGE_MAX_FILES+'개)');continue;}
+    if(!/\.(txt|md|markdown|csv|log|pdf)$/i.test(file.name)){failed.push(file.name+' (TXT, PDF만)');continue;}
+    let result;
+    try{result=await api.readFile({name:file.name,bytes:await file.arrayBuffer(),type:file.type});}
+    catch{result={ok:false,message:'파일을 읽지 못했어요.'};}
+    if(result&&result.ok){
+      state.knowledge=(state.knowledge||[]).filter(k=>k.name!==result.name);
+      state.knowledge.push({name:result.name,text:result.text,chars:result.chars,...(result.truncated?{truncated:true}:{})});
+      added++;
+    }else failed.push(file.name+(result&&result.message?': '+result.message:''));
+  }
+  renderKnowledge();controls();await save();
+  if(failed.length)$('knowledgeNote').textContent='넣지 못함: '+failed.join(' / ');
+  else if(added)$('knowledgeNote').textContent=knowledgeTotal()>KNOWLEDGE_TOTAL_WARN?
+    '자료를 넣었어요. 자료가 많아 앞부분 위주로 반영됩니다.':'자료를 넣었어요. 이제 이 자료를 참고해 답변합니다.';
+}
+(function wireKnowledge(){
+  const zone=$('dropZone'),input=$('fileInput');
+  $('pickFiles').onclick=event=>{event.stopPropagation();if(!busy)input.click();};
+  zone.addEventListener('click',()=>{if(!busy)input.click();});
+  zone.addEventListener('keydown',e=>{if(e.target===zone&&(e.key==='Enter'||e.key===' ')){e.preventDefault();input.click();}});
+  input.addEventListener('change',()=>{addFiles(input.files);input.value='';});
+  ['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();if(!busy)zone.classList.add('drag');}));
+  ['dragleave','dragend'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove('drag');}));
+  zone.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();zone.classList.remove('drag');addFiles(e.dataTransfer&&e.dataTransfer.files);});
+  $('knowledgeList').addEventListener('click',e=>{
+    const btn=e.target.closest('.k-remove');if(!btn||busy)return;
+    const i=Number(btn.dataset.index);if(Number.isInteger(i)){state.knowledge.splice(i,1);renderKnowledge();save();}
+  });
+  window.addEventListener('dragover',e=>e.preventDefault());
+  window.addEventListener('drop',e=>e.preventDefault());
+})();
+
+/* ── 설정 접기 ─────────────────────────────────────────────────── */
+function setSidebar(open){
+  $('sidebar').hidden=!open;
+  $('workspace').classList.toggle('sidebar-collapsed',!open);
+  $('sidebarToggle').setAttribute('aria-expanded',String(open));
+  $('sidebarToggle').textContent=open?'설정 접기':'설정 펼치기';
+}
+try{setSidebar(localStorage.getItem('easy-ai-sidebar')!=='closed');}catch{setSidebar(true);}
+$('sidebarToggle').onclick=()=>{
+  const open=$('sidebar').hidden;setSidebar(open);
+  try{localStorage.setItem('easy-ai-sidebar',open?'open':'closed');}catch{}
+};
+
+/* ── 시작 ──────────────────────────────────────────────────────── */
+(async()=>{
+  try{state=await api.load();}catch{setNotice('이전 대화를 읽지 못했습니다. 새 대화로 시작합니다.');}
+  state.messages=state.messages.filter(m=>m.content);if(!Array.isArray(state.knowledge))state.knowledge=[];
+  $('prompt').value=state.prompt;renderMessages();renderKnowledge();showEngine();
+  await checkConnection();controls();
+})();
+</script>
+</body>
+</html>
