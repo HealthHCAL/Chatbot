@@ -5,9 +5,10 @@ AI에게 역할을 정해 주고 쉽게 대화하는 웹 앱입니다. `index.ht
 ## 쓰는 방법
 
 - `index.html`을 브라우저(Chrome, Edge 권장)로 열거나, GitHub Pages 같은 곳에 올려서 엽니다.
-- 왼쪽 **AI 연결**에서 대화할 AI를 고릅니다.
+- 처음 열면 **브라우저 안의 AI**가 기본으로 골라져 있습니다. 가운데 **AI 준비하기**를 누르면, 설치나 키 없이 바로 실습할 수 있습니다 (처음 한 번 AI 파일을 받는 데 몇 분 걸립니다).
+- 다른 AI를 쓰려면 왼쪽 **AI 연결**에서 고릅니다.
+  - **브라우저 안의 AI (기본)**: 설치도 키도 필요 없습니다. Chrome, Edge 같은 WebGPU 지원 브라우저가 필요합니다.
   - **내 컴퓨터의 Ollama**: 무료. PC에 [Ollama](https://ollama.com/download)가 설치되어 있어야 합니다.
-  - **브라우저 안의 AI**: 설치 없음. 처음 한 번 AI 파일을 받습니다 (WebGPU 지원 브라우저 필요).
   - **Claude**: Anthropic API 키가 필요합니다.
   - **OpenAI 호환 서비스**: OpenAI, OpenRouter, Groq, LM Studio 등. 주소와 키를 넣습니다.
 
