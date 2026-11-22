@@ -64,9 +64,23 @@ input[type=text],input[type=password],input[type=url]{font-size:.8em;min-height:
 textarea:hover,select:hover,input:hover{border-color:var(--color-muted)}
 textarea:disabled,select:disabled,input:disabled{background:var(--color-disabled-bg);color:var(--color-disabled-ink);border-color:var(--color-disabled-bg);cursor:not-allowed}
 select{font-size:.83em;margin-bottom:var(--space-2xs)}
-#prompt{font-size:1em;margin-bottom:var(--space-md);min-height:300px;max-height:720px}
+#prompt{font-size:1em;margin-bottom:var(--space-md);max-height:720px}
 #botName{margin-bottom:var(--space-md);font-size:.9em}
-.prompt-label{margin-top:var(--space-2xs)}
+.step{display:flex;align-items:center;gap:var(--space-xs);font-size:.9em;font-weight:700;margin:0 0 var(--space-xs)}
+.step .muted{font-weight:500;color:var(--color-muted);font-size:.82em}
+.step-num{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;border:2px solid var(--color-rule);font-size:.72em;flex:none}
+#prompt{min-height:180px}
+#rules{font-size:.85em;min-height:150px;max-height:520px;margin-bottom:var(--space-2xs)}
+label[for=rules]{margin-top:var(--space-lg)}
+.file-row{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-sm);margin-bottom:var(--space-xs)}
+.file-row button{font-size:.75em;min-height:44px;padding:var(--space-2xs) var(--space-sm)}
+.file-name{font-size:.72em;color:var(--color-muted);overflow-wrap:anywhere}
+#rules.drag{border-color:var(--color-accent);background:var(--color-drop-active)}
+.sources{margin-top:var(--space-xs);font-size:.72em;color:var(--color-muted)}
+.sources>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--color-accent)}
+.sources blockquote{margin:var(--space-xs) 0 0;padding:var(--space-xs) var(--space-sm);border:1px solid var(--color-rule-soft);background:var(--color-paper-3);border-radius:var(--radius-field);white-space:pre-wrap}
+.sources cite{display:block;font-style:normal;font-weight:700;margin-top:var(--space-sm)}
+.no-source{margin-top:var(--space-xs);font-size:.72em;color:var(--color-muted)}
 .examples{display:flex;flex-wrap:wrap;gap:var(--space-xs);margin-bottom:var(--space-sm)}
 .example{font-size:.72em;font-weight:500;padding:var(--space-2xs) var(--space-sm);min-height:44px;background:var(--color-chip);color:var(--color-accent);border-color:var(--color-rule-soft)}
 .example:hover{border-color:var(--color-accent);filter:none}
@@ -195,9 +209,9 @@ dialog p{margin:var(--space-sm) 0 var(--space-lg)}
 <main>
 <div id="workspace" class="workspace">
 <aside id="sidebar" aria-label="AI 역할과 연결 설정">
-  <label for="botName">챗봇 이름</label>
+  <label for="botName" class="step"><span class="step-num" aria-hidden="true">1</span>챗봇 이름</label>
   <input id="botName" type="text" maxlength="30" autocomplete="off" placeholder="예: 영어 선생님 토끼">
-  <label for="prompt" class="prompt-label">AI에게 맡길 역할</label>
+  <label for="prompt" class="step"><span class="step-num" aria-hidden="true">2</span>역할: 어떤 챗봇인가요?</label>
   <div class="examples" role="group" aria-label="예시 역할">
     <button type="button" class="example" data-example="kind">친절한 도우미</button>
     <button type="button" class="example" data-example="english">영어 선생님</button>
@@ -205,8 +219,15 @@ dialog p{margin:var(--space-sm) 0 var(--space-lg)}
     <button type="button" class="example" data-example="quiz">퀴즈 진행자</button>
     <button type="button" class="example" data-example="friend">고민 상담 친구</button>
   </div>
-  <textarea id="prompt" rows="9" maxlength="4000" placeholder="예: 영어를 쉽게 가르쳐 주세요."></textarea>
-  <button id="apply" class="wide" type="button" disabled>역할 적용</button>
+  <textarea id="prompt" rows="6" maxlength="4000" placeholder="예: 영어를 쉽게 가르쳐 주세요."></textarea>
+
+  <label for="rules" class="step"><span class="step-num" aria-hidden="true">3</span>답변 규칙과 흐름 <span class="muted">(선택)</span></label>
+  <p class="caption">답할 때 지킬 규칙이나 대화 순서를 적거나, TXT 파일로 불러오세요. 불러온 뒤에도 고칠 수 있어요.</p>
+  <div class="file-row"><button id="pickRules" class="light" type="button">규칙 파일 불러오기</button><span id="rulesFile" class="file-name"></span></div>
+  <input id="rulesInput" type="file" accept=".txt,.md,.markdown" hidden>
+  <textarea id="rules" rows="6" maxlength="4000" placeholder="예:&#10;1. 먼저 이름을 물어보세요.&#10;2. 답은 세 문장 이내로 하세요.&#10;3. 자료에 없는 내용은 모른다고 하세요."></textarea>
+  <p id="rulesNote" class="caption" role="status"></p>
+  <button id="apply" class="wide" type="button" disabled>역할과 규칙 적용</button>
   <p id="roleState" class="role-state" role="status">이 역할로 대화합니다.</p>
   <button id="share" class="light wide" type="button">내 챗봇 공유하기</button>
   <div id="shareBox" class="share-box" hidden>
@@ -215,10 +236,10 @@ dialog p{margin:var(--space-sm) 0 var(--space-lg)}
     <p id="shareNote" class="caption" role="status"></p>
   </div>
 
-  <details id="knowledgePanel" class="panel">
-    <summary>지식 추가 <span class="muted">(선택)</span></summary>
+  <section id="knowledgePanel" class="panel" aria-labelledby="knowledgeTitle">
+    <h2 id="knowledgeTitle" class="step"><span class="step-num" aria-hidden="true">4</span>참고 자료 <span class="muted">(선택)</span></h2>
     <div class="panel-body">
-      <p class="caption">역할에 더해, AI가 참고할 자료를 넣을 수 있어요. 넣은 자료는 답변에 반영됩니다.</p>
+      <p class="caption">PDF, TXT 파일을 넣으면 질문할 때마다 관련 있는 부분을 찾아 AI에게 함께 보여 줍니다. 답변 아래에서 어느 자료를 참고했는지 볼 수 있어요.</p>
       <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="지식 파일 넣기. 파일을 끌어다 놓거나 눌러서 고르세요.">
         <p class="drop-hint"><strong>TXT, PDF 파일</strong>을 여기로<br>끌어다 놓으세요 (여러 개 가능)</p>
         <button id="pickFiles" class="light" type="button">파일 고르기</button>
@@ -227,7 +248,7 @@ dialog p{margin:var(--space-sm) 0 var(--space-lg)}
       <ul id="knowledgeList" class="knowledge-list" aria-label="넣은 자료 목록"></ul>
       <p id="knowledgeNote" class="caption" role="status"></p>
     </div>
-  </details>
+  </section>
 
   <details id="ollamaPanel" class="panel" open>
     <summary>AI 연결</summary>
@@ -346,17 +367,17 @@ let settings=loadSettings();
 function saveSettings(){try{localStorage.setItem(ENGINE_KEY,JSON.stringify(settings));}catch{}}
 
 function loadState(){
-  const d={name:'',prompt:DEFAULT_PROMPT,model:'',fontSize:22,messages:[],knowledge:[]};
+  const d={name:'',rules:'',prompt:DEFAULT_PROMPT,model:'',fontSize:22,messages:[],knowledge:[]};
   let v;try{v=JSON.parse(localStorage.getItem(STATE_KEY)||'null');}catch{return d;}
   if(!v||typeof v!=='object')return d;
-  return {...d,name:typeof v.name==='string'?v.name.slice(0,30):'',prompt:typeof v.prompt==='string'?v.prompt.slice(0,4000):d.prompt,model:typeof v.model==='string'?v.model:'',
+  return {...d,name:typeof v.name==='string'?v.name.slice(0,30):'',rules:typeof v.rules==='string'?v.rules.slice(0,4000):'',prompt:typeof v.prompt==='string'?v.prompt.slice(0,4000):d.prompt,model:typeof v.model==='string'?v.model:'',
     messages:Array.isArray(v.messages)?v.messages.filter(m=>m&&['user','assistant'].includes(m.role)&&typeof m.content==='string').slice(-100):[],
     knowledge:Array.isArray(v.knowledge)?v.knowledge.filter(k=>k&&typeof k.name==='string'&&typeof k.text==='string').slice(0,20):[]};
 }
 
 /* ── 대화 내용 정리 (데스크탑 앱과 같은 규칙) ───────────────────── */
-function buildMessages(prompt,history,knowledge=''){
-  if(typeof prompt!=='string'||prompt.length>4000)throw new Error('AI 역할은 4,000자까지 적어 주세요.');
+function buildMessages(prompt,history,knowledge='',historyChars=16000,rules=''){
+  if(typeof prompt!=='string'||prompt.length>9000)throw new Error('역할과 규칙이 너무 깁니다. 줄여 주세요.');
   if(!Array.isArray(history)||!history.length||history.length>200)throw new Error('대화 내용을 확인해 주세요.');
   const clean=history.map(m=>{
     if(!m||!['user','assistant'].includes(m.role)||typeof m.content!=='string'||!m.content.trim()||m.content.length>12000)
@@ -366,15 +387,17 @@ function buildMessages(prompt,history,knowledge=''){
   if(clean.at(-1).role!=='user')throw new Error('보낼 말을 먼저 적어 주세요.');
   const recent=[];let size=0;
   for(let i=clean.length-1;i>=0&&recent.length<20;i--){
-    if(size+clean[i].content.length>16000&&recent.length)break;
+    if(size+clean[i].content.length>historyChars&&recent.length)break;
     recent.unshift(clean[i]);size+=clean[i].content.length;
   }
   while(recent.length>1&&recent[0].role!=='user')recent.shift();
   let system=prompt.trim()||DEFAULT_PROMPT;
   if(typeof knowledge==='string'&&knowledge.trim()){
     let k=knowledge.trim();if(k.length>KNOWLEDGE_BUDGET)k=k.slice(0,KNOWLEDGE_BUDGET);
-    system+='\n\n아래 [참고 자료]는 사용자가 올린 자료입니다. 답변에 필요하면 이 자료를 근거로 삼고, 자료에 없는 내용은 지어내지 마세요.\n\n[참고 자료]\n'+k;
+    system+='\n\n[참고 자료]\n아래는 사용자가 올린 자료에서 이번 질문과 관련 있는 부분만 골라 온 것입니다. 답변에 필요하면 이 자료를 근거로 삼고, 자료에 없는 내용은 지어내지 말고 모른다고 말하세요.\n\n'+k;
   }
+  if(typeof rules==='string'&&rules.trim()){const last=recent[recent.length-1];recent[recent.length-1]={...last,content:last.content+'\n\n(답하기 전에 [답변 규칙과 흐름]을 다시 확인하고, 모든 규칙을 지켜서 답하세요.)'};}
+  if(typeof rules==='string'&&rules.trim())system+='\n\n[답변 규칙과 흐름]\n아래 규칙과 대화 순서를 반드시 지키세요. 다른 지시보다 이 규칙이 먼저입니다.\n'+rules.trim().slice(0,4000);
   return {system,messages:recent};
 }
 
@@ -410,6 +433,7 @@ function friendly(error,engine){
     return engine==='ollama'?'Ollama에 연결되지 않았습니다. Ollama가 켜져 있는지, 웹에서 쓰도록 설정했는지 확인해 주세요.':
       '연결하지 못했습니다. 인터넷과 주소를 확인해 주세요. 브라우저에서 바로 부를 수 없는 서비스일 수도 있습니다.';
   }
+  if(/context.?window|exceed|too long|maximum context/i.test(text))return '역할, 규칙, 자료를 합친 글이 너무 길어 AI가 한 번에 읽지 못합니다. 규칙을 줄이거나 새 대화를 시작해 주세요.';
   if(/timeout|timed out/i.test(text))return 'AI의 응답이 오래 걸립니다. 잠시 뒤 다시 보내 주세요.';
   if(text==='incomplete')return '연결이 끊겼습니다. 다시 보내기를 눌러 주세요.';
   return '답변을 받지 못했습니다. 잠시 뒤 다시 보내 주세요. 계속되면 다른 AI를 골라 주세요.';
@@ -430,7 +454,7 @@ const providers={
       return {ok:true,canPull:true,starter:'qwen2.5:1.5b',preferred:['gemma3:1b','qwen2.5:1.5b'],models};
     },
     async chat(p,signal,emit){
-      const {system,messages}=buildMessages(p.prompt,p.history,p.knowledge);
+      const {system,messages}=buildMessages(p.prompt,p.history,p.knowledge,16000,p.rules);
       const has=!!(p.knowledge&&p.knowledge.trim());
       const r=await fetch(this.base()+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal,
         body:JSON.stringify({model:p.model,messages:[{role:'system',content:system},...messages],stream:true,options:{num_ctx:has?8192:4096,num_predict:768}})});
@@ -476,7 +500,7 @@ const providers={
       return {ok:true,canAdd:true,preferred:['gpt-4.1-mini','gpt-4o-mini'],models:names.map(name=>({name}))};
     },
     async chat(p,signal,emit){
-      const {system,messages}=buildMessages(p.prompt,p.history,p.knowledge);
+      const {system,messages}=buildMessages(p.prompt,p.history,p.knowledge,16000,p.rules);
       const r=await fetch(this.base()+'/chat/completions',{method:'POST',headers:this.headers(),signal,
         body:JSON.stringify({model:p.model,stream:true,messages:[{role:'system',content:system},...messages]})});
       if(!r.ok)throw await httpError(r);
@@ -518,7 +542,7 @@ const providers={
       return {ok:true,canAdd:true,preferred:['claude-opus-5-5'],models:names.map(name=>({name}))};
     },
     async chat(p,signal,emit){
-      const {system,messages}=buildMessages(p.prompt,p.history,p.knowledge);
+      const {system,messages}=buildMessages(p.prompt,p.history,p.knowledge,16000,p.rules);
       const body={model:p.model,max_tokens:8000,system,messages,stream:true};
       if(this.effort.test(p.model))body.output_config={effort:'low'};
       const useFallback=this.fallback.includes(p.model);
@@ -544,8 +568,8 @@ const providers={
     lib:null,engine:null,loaded:'',
     catalog:[
       {name:'Qwen2.5-1.5B-Instruct-q4f16_1-MLC',label:'Qwen 2.5 1.5B (권장)'},
-      {name:'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',label:'Qwen 2.5 0.5B (가장 가벼움)'},
-      {name:'Qwen2.5-3B-Instruct-q4f16_1-MLC',label:'Qwen 2.5 3B (더 똑똑하지만 무거움)'},
+      {name:'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',label:'Qwen 2.5 0.5B (가장 가벼움, 규칙과 자료는 잘 못 따름)'},
+      {name:'Qwen2.5-3B-Instruct-q4f16_1-MLC',label:'Qwen 2.5 3B (규칙을 더 잘 따르지만 무거움)'},
       {name:'gemma-2-2b-it-q4f16_1-MLC',label:'Gemma 2 2B'},
       {name:'Llama-3.2-1B-Instruct-q4f16_1-MLC',label:'Llama 3.2 1B (영어에 강함)'}
     ],
@@ -560,11 +584,11 @@ const providers={
       if(this.engine&&this.loaded===model)return;
       if(!this.lib)this.lib=await import(WEBLLM_URL);
       if(this.engine){try{await this.engine.unload();}catch{}this.engine=null;this.loaded='';}
-      this.engine=await this.lib.CreateMLCEngine(model,{initProgressCallback:r=>onProgress(Math.min(100,Math.floor((r.progress||0)*100)))});
+      this.engine=await this.lib.CreateMLCEngine(model,{initProgressCallback:r=>onProgress(Math.min(100,Math.floor((r.progress||0)*100)))},{context_window_size:8192});
       this.loaded=model;
     },
     async chat(p,signal,emit){
-      const {system,messages}=buildMessages(p.prompt,p.history,p.knowledge);
+      const {system,messages}=buildMessages(p.prompt,p.history,p.knowledge,2400,p.rules);
       if(!(this.engine&&this.loaded===p.model)){
         emit({type:'loading',text:'AI를 불러오고 있습니다. 처음에는 몇 분 걸릴 수 있어요.'});
         await this.load(p.model,pct=>emit({type:'loading',text:'AI를 불러오고 있습니다 ('+pct+'%). 처음에는 몇 분 걸릴 수 있어요.'}));
@@ -674,17 +698,19 @@ async function readKnowledgeFile(payload){
 /* ── 화면 (데스크탑 앱 app.js를 옮겨 옴) ───────────────────────── */
 function newId(){return globalThis.crypto&&crypto.randomUUID?crypto.randomUUID():'chat-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);}
 const $=id=>document.getElementById(id);
-let state={name:'',prompt:DEFAULT_PROMPT,model:'',fontSize:22,messages:[],knowledge:[]};
+let state={name:'',rules:'',prompt:DEFAULT_PROMPT,model:'',fontSize:22,messages:[],knowledge:[]};
 let connected=false,connectChecked=false,caps={},starterModel='';
 let ready=false,models=[],busy='',job=null,lastRequest=null,saveTimer=null,confirmAction=null,connectGeneration=0;
 
 function setNotice(text='',retry=false){$('notice').hidden=!text;$('noticeText').textContent=text;$('retry').hidden=!retry;}
-function dirty(){return $('prompt').value.trim()!==state.prompt.trim()||(!!$('model').value&&$('model').value!==state.model);}
+function dirty(){return $('prompt').value.trim()!==state.prompt.trim()||$('rules').value.trim()!==(state.rules||'').trim()||(!!$('model').value&&$('model').value!==state.model);}
 function controls(){
   const changed=dirty(),eng=settings.engine;
   $('send').disabled=!ready||!!busy||changed||!$('message').value.trim();
   $('stop').hidden=busy!=='chat';$('stop').disabled=false;
-  document.querySelectorAll('.example').forEach(b=>b.disabled=!!busy);$('botName').disabled=!!busy;$('share').disabled=!!busy;
+  document.querySelectorAll('.example').forEach(b=>b.disabled=!!busy);$('botName').disabled=!!busy;$('share').disabled=!!busy;$('rules').disabled=!!busy;$('pickRules').disabled=!!busy;
+  {const len=$('prompt').value.trim().length+$('rules').value.trim().length;
+    $('rulesNote').textContent=settings.engine==='webllm'&&len>2500?'브라우저 안의 AI는 역할과 규칙을 합쳐 2,500자 안쪽일 때 잘 따릅니다. 지금 '+len.toLocaleString('ko-KR')+'자입니다.':'';}
   $('apply').disabled=!!busy||!ready;$('newChat').disabled=!!busy||!state.messages.length;
   $('modelApply').disabled=!!busy||!ready||$('model').value===state.model;
   $('model').disabled=!!busy||!models.length;$('prompt').disabled=!!busy;
@@ -742,6 +768,16 @@ function renderMessages(){
     const who=document.createElement('div');who.className='speaker';who.textContent=m.role==='user'?'나':(state.name||'AI');
     const bubble=document.createElement('div');bubble.className='bubble';bubble.textContent=m.content||'답변을 준비하고 있습니다…';
     item.append(who,bubble);
+    if(m.role==='assistant'&&m.content&&Array.isArray(m.sources)){
+      if(!m.sources.length){const none=document.createElement('p');none.className='no-source';none.textContent='이번 질문과 관련 있는 자료를 찾지 못했어요.';item.append(none);}
+      else{
+        const box=document.createElement('details');box.className='sources';
+        const sum=document.createElement('summary');sum.textContent='참고한 자료: '+m.sources.map(x=>x.name).join(', ');box.append(sum);
+        m.sources.forEach(src=>{const c=document.createElement('cite');c.textContent=src.name;box.append(c);
+          (src.excerpts||[]).forEach(t=>{const q=document.createElement('blockquote');q.textContent=t;box.append(q);});});
+        item.append(box);
+      }
+    }
     if(m.interrupted){const note=document.createElement('div');note.className='incomplete';note.textContent='중간에 멈춘 답변입니다.';item.append(note);}
     area.append(item);
   });
@@ -802,7 +838,8 @@ function closeConfirm(run){const action=confirmAction;confirmAction=null;$('conf
 function applyRole(){
   if(busy||!ready)return;
   const prompt=$('prompt').value.trim(),model=$('model').value;
-  const apply=()=>{state.prompt=prompt;state.model=model;state.messages=[];lastRequest=null;
+  const rules=$('rules').value.trim();
+  const apply=()=>{state.prompt=prompt;state.rules=rules;state.model=model;state.messages=[];lastRequest=null;
     renderMessages();setNotice();$('status').textContent='새 설정을 적용했습니다. 이제 말을 걸어 보세요.';save();controls();$('message').focus();};
   if(state.messages.length&&dirty())ask('새 설정으로 대화할까요?','역할이나 AI를 바꾸면 지금 화면의 대화는 지워지고 새 대화를 시작합니다.',apply);
   else if(dirty()||!state.messages.length)apply();
@@ -814,12 +851,14 @@ async function send(textOverride){
   if(text.length>4000){setNotice('한 번에 4,000자까지 보낼 수 있습니다.');return;}
   const before=state.messages.filter(m=>m.content).slice(-98);
   lastRequest={text,before:structuredClone(before)};
-  state.messages=[...before,{role:'user',content:text},{role:'assistant',content:''}];
+  const prevUser=[...before].reverse().find(m=>m.role==='user');
+  const picked=pickKnowledge(text,prevUser?prevUser.content:'',settings.engine==='webllm'?2400:6000);
+  state.messages=[...before,{role:'user',content:text},{role:'assistant',content:'',...(picked.sources?{sources:picked.sources}:{})}];
   const id=newId();job={id,index:state.messages.length-1,received:false};busy='chat';
   if(textOverride===undefined)$('message').value='';
   setNotice();$('status').textContent='AI가 답변을 준비하고 있습니다. 처음에는 시간이 걸릴 수 있어요.';
   renderMessages();controls();save();
-  try{await api.chat({id,model:state.model,prompt:(state.name?'당신의 이름은 "'+state.name+'"입니다. 누가 이름을 물으면 이 이름으로 답하세요.\n':'')+state.prompt,knowledge:knowledgeText(),history:[...before.filter(m=>!m.interrupted),{role:'user',content:text}]});}
+  try{await api.chat({id,model:state.model,prompt:composeSystem(),rules:state.rules||'',knowledge:picked.text,history:[...before.filter(m=>!m.interrupted),{role:'user',content:text}]});}
   catch(error){finish('error',String(error.message||error));}
 }
 function finish(type,message){
@@ -866,7 +905,7 @@ $('prompt').addEventListener('input',controls);$('model').addEventListener('chan
 $('apply').onclick=applyRole;
 $('modelApply').onclick=applyRole;
 $('newChat').onclick=()=>{if(busy)return;ask('새 대화를 시작할까요?','지금 화면의 대화가 지워집니다. AI 역할은 그대로 사용합니다.',()=>{
-  state.messages=[];lastRequest=null;$('prompt').value=state.prompt;if(models.some(m=>m.name===state.model))$('model').value=state.model;
+  state.messages=[];lastRequest=null;$('prompt').value=state.prompt;$('rules').value=state.rules||'';if(models.some(m=>m.name===state.model))$('model').value=state.model;
   setNotice();$('status').textContent='새 대화를 시작합니다.';renderMessages();save();controls();$('message').focus();});};
 $('confirmNo').onclick=()=>closeConfirm(false);$('confirmYes').onclick=()=>closeConfirm(true);
 $('confirm').addEventListener('cancel',()=>{confirmAction=null;});
@@ -916,7 +955,66 @@ document.querySelectorAll('input[name=engine]').forEach(radio=>radio.addEventLis
 
 /* ── 지식 추가 (참고 자료) ─────────────────────────────────────── */
 const KNOWLEDGE_MAX_FILES=20,KNOWLEDGE_TOTAL_WARN=6000;
-function knowledgeText(){return (state.knowledge||[]).map(k=>'### '+k.name+'\n'+k.text).join('\n\n');}
+/* 질문과 관련 있는 부분만 골라 AI에게 보여 준다 (작은 AI도 많은 자료를 쓸 수 있게) */
+function composeSystem(){
+  let sys='';
+  if(state.name)sys+='당신의 이름은 "'+state.name+'"입니다. 누가 이름을 물으면 이 이름으로 답하세요.\n\n';
+  sys+=state.prompt.trim()||DEFAULT_PROMPT;
+  return sys;
+}
+const STOP=new Set(['에는','에서','으로','는데','니다','습니','해요','예요','에요','어요','아요','세요','하는','있는','합니','입니','이에','하고','에게','까지','부터','이나','는지','나요','가요','인가','어디','언제','무엇','뭐예','알려','려주','주세','있어','있나','해주','몇명','명이','the','and','is','are','what']);
+function termsOf(text){
+  const set=new Set(),low=text.toLowerCase();
+  for(const w of low.match(/[a-z0-9]{2,}/g)||[])set.add(w);
+  for(const run of low.match(/[가-힣]+/g)||[]){for(let i=0;i<run.length-1;i++)set.add(run.slice(i,i+2));}
+  for(const t of STOP)set.delete(t);
+  return set;
+}
+const chunkCache=new Map();
+function chunksOf(k){
+  const key=k.name+'|'+k.text.length;if(chunkCache.has(key))return chunkCache.get(key);
+  const out=[];let cur='';const push=()=>{if(cur.trim())out.push(cur.trim());cur='';};
+  for(const para of k.text.split(/\n\s*\n|\n(?=#{1,6}\s|\d+\.\s|[■●▶◆□○]\s?)/)){
+    if(/^(#{1,6}\s|\d+\.\s|[■●▶◆□○])/.test(para.trim()))push();
+    if(para.length>900){push();for(let i=0;i<para.length;i+=700)out.push(para.slice(i,i+800).trim());continue;}
+    if(cur.length+para.length>700)push();
+    cur+=(cur?'\n\n':'')+para;
+  }
+  push();
+  const list=out.filter(Boolean).map(text=>({name:k.name,text,terms:termsOf(text)}));
+  chunkCache.set(key,list);return list;
+}
+function bestExcerpt(text,terms){
+  const parts=text.split(/(?<=[.!?。])\s+|\n+/).map(t=>t.trim()).filter(Boolean);
+  let best=0,bestScore=-1;
+  parts.forEach((p,i)=>{let sc=0;const t=termsOf(p);for(const q of terms)if(t.has(q))sc++;if(sc>bestScore){bestScore=sc;best=i;}});
+  let out=parts[best]||text;if(out.length<90&&parts[best+1])out+=' '+parts[best+1];
+  return out.length>200?out.slice(0,200)+'…':out;
+}
+function pickKnowledge(query,prevQuery,budget){
+  const files=state.knowledge||[];if(!files.length)return {text:''};
+  const all=files.flatMap(chunksOf);
+  let chosen;
+  if(all.reduce((n,c)=>n+c.text.length,0)<=budget)chosen=all;
+  else{
+    const qNow=termsOf(query),qPrev=new Set([...termsOf(prevQuery||'')].filter(t=>!qNow.has(t)));
+    const q=new Set([...qNow,...qPrev]),N=all.length,df=new Map();
+    for(const t of q){let d=0;for(const c of all)if(c.terms.has(t))d++;if(d&&d<=Math.max(2,N*0.5))df.set(t,d);}
+    const scored=all.map((c,i)=>{let now=0,prev=0;for(const t of q){const d=df.get(t);if(d&&c.terms.has(t)){if(qNow.has(t))now+=Math.log(1+N/d);else prev+=Math.log(1+N/d);}}
+        return {c,i,now,sc:(now+0.3*prev)/Math.sqrt(1+c.terms.size/60)};})
+      .filter(x=>x.now>0).sort((a,b)=>b.sc-a.sc);
+    const top=scored.length?scored[0].sc:0;
+    const pick=[];let used=0;
+    for(const x of scored){if(x.sc<top*0.35)break;if(used+x.c.text.length>budget)continue;pick.push(x);used+=x.c.text.length;if(used>budget*0.9||pick.length>=6)break;}
+    chosen=pick.sort((a,b)=>a.i-b.i).map(x=>x.c);
+  }
+  if(!chosen.length)return {text:'(이번 질문과 관련 있는 부분을 자료에서 찾지 못했습니다.)',sources:[]};
+  const byName=new Map();for(const c of chosen){if(!byName.has(c.name))byName.set(c.name,[]);byName.get(c.name).push(c.text);}
+  const text=[...byName].map(([name,texts])=>'### '+name+'\n'+texts.join('\n\n')).join('\n\n');
+  const qTerms=termsOf(query);
+  const sources=[...byName].map(([name,texts])=>({name,excerpts:texts.map(t=>bestExcerpt(t,qTerms))}));
+  return {text,sources};
+}
 function knowledgeTotal(){return (state.knowledge||[]).reduce((n,k)=>n+(k.chars||k.text.length),0);}
 function renderKnowledge(){
   const list=$('knowledgeList');list.replaceChildren();
@@ -934,7 +1032,7 @@ function renderKnowledge(){
   const note=$('knowledgeNote');const n=(state.knowledge||[]).length;
   if(!n)note.textContent='';
   else{const total=knowledgeTotal();
-    note.textContent='자료 '+n+'개, 약 '+total.toLocaleString('ko-KR')+'자.'+(total>KNOWLEDGE_TOTAL_WARN?' 자료가 많아 앞부분 위주로 반영됩니다.':'');}
+    note.textContent='자료 '+n+'개, 약 '+total.toLocaleString('ko-KR')+'자. 질문마다 관련 있는 부분을 골라 씁니다.';}
 }
 async function addFiles(fileList){
   if(busy){setNotice('작업이 끝난 뒤 자료를 넣어 주세요.');return;}
@@ -955,8 +1053,7 @@ async function addFiles(fileList){
   }
   renderKnowledge();controls();await save();
   if(failed.length)$('knowledgeNote').textContent='넣지 못함: '+failed.join(' / ');
-  else if(added)$('knowledgeNote').textContent=knowledgeTotal()>KNOWLEDGE_TOTAL_WARN?
-    '자료를 넣었어요. 자료가 많아 앞부분 위주로 반영됩니다.':'자료를 넣었어요. 이제 이 자료를 참고해 답변합니다.';
+  else if(added)$('knowledgeNote').textContent='자료를 넣었어요. 질문하면 관련 있는 부분을 찾아 답변합니다.';
 }
 (function wireKnowledge(){
   const zone=$('dropZone'),input=$('fileInput');
@@ -1013,13 +1110,13 @@ function decodeBot(text){
   try{const bin=atob(text.replace(/-/g,'+').replace(/_/g,'/'));const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
     const v=JSON.parse(new TextDecoder().decode(bytes));
     if(!v||typeof v.p!=='string'||!v.p.trim())return null;
-    return {name:typeof v.n==='string'?v.n.trim().slice(0,30):'',prompt:v.p.slice(0,4000)};
+    return {name:typeof v.n==='string'?v.n.trim().slice(0,30):'',prompt:v.p.slice(0,4000),rules:typeof v.r==='string'?v.r.slice(0,4000):''};
   }catch{return null;}
 }
 $('share').onclick=async()=>{
   $('shareBox').hidden=false;
   if(dirty()){$('shareLink').value='';$('shareNote').textContent='바뀐 역할을 먼저 적용한 뒤 공유해 주세요.';return;}
-  const url=location.href.split('#')[0]+'#bot='+encodeBot({v:1,n:state.name,p:state.prompt});
+  const url=location.href.split('#')[0]+'#bot='+encodeBot({v:1,n:state.name,p:state.prompt,r:state.rules||''});
   $('shareLink').value=url;
   let copied=false;try{await navigator.clipboard.writeText(url);copied=true;}catch{}
   $('shareNote').textContent=(copied?'링크를 복사했습니다. 친구에게 보내 보세요. ':'위 링크를 눌러 복사해 주세요. ')+
@@ -1032,19 +1129,39 @@ function loadSharedBot(){
   history.replaceState(null,'',location.href.split('#')[0]);
   const bot=decodeBot(m[1]);
   if(!bot){setNotice('공유 링크를 읽지 못했습니다. 링크가 잘리지 않았는지 확인해 주세요.');return;}
-  const apply=()=>{state.name=bot.name;state.prompt=bot.prompt;state.messages=[];state.knowledge=[];lastRequest=null;
-    $('botName').value=bot.name;$('prompt').value=bot.prompt;setNotice();renderMessages();renderKnowledge();save();controls();
+  const apply=()=>{state.name=bot.name;state.prompt=bot.prompt;state.rules=bot.rules;state.messages=[];state.knowledge=[];lastRequest=null;
+    $('botName').value=bot.name;$('prompt').value=bot.prompt;$('rules').value=bot.rules;$('rulesFile').textContent='';setNotice();renderMessages();renderKnowledge();save();controls();
     $('status').textContent=(bot.name?'"'+bot.name+'" 챗봇':'공유받은 챗봇')+'을 불러왔습니다. 말을 걸어 보세요.';};
   if(state.messages.length||state.knowledge.length)ask((bot.name||'공유받은 챗봇')+'을 불러올까요?','지금 화면의 대화와 넣은 자료는 지워지고, 공유받은 챗봇으로 바뀝니다.',apply);
   else apply();
 }
 window.addEventListener('hashchange',loadSharedBot);
 
+async function loadRulesFile(file){
+  if(!file||busy)return;
+  if(!/\.(txt|md|markdown)$/i.test(file.name)){$('rulesFile').textContent='규칙은 TXT 파일만 불러올 수 있어요.';return;}
+  let text;
+  try{text=decodeText(await file.arrayBuffer()).replace(/\r\n?/g,'\n').trim();}catch{text='';}
+  if(!text){$('rulesFile').textContent='이 파일에는 글자가 없습니다.';return;}
+  const cut=text.length>4000;
+  const fill=()=>{$('rules').value=text.slice(0,4000);
+    $('rulesFile').textContent=file.name+(cut?' (4,000자까지만 불러왔어요)':' 불러옴');controls();$('rules').focus();};
+  if($('rules').value.trim()&&$('rules').value.trim()!==text.slice(0,4000))ask('규칙을 바꿀까요?','지금 적혀 있는 규칙이 '+file.name+' 내용으로 바뀝니다.',fill);
+  else fill();
+}
+$('pickRules').onclick=()=>{if(!busy)$('rulesInput').click();};
+$('rulesInput').addEventListener('change',()=>{loadRulesFile($('rulesInput').files[0]);$('rulesInput').value='';});
+$('rules').addEventListener('input',controls);
+['dragenter','dragover'].forEach(ev=>$('rules').addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();if(!busy)$('rules').classList.add('drag');}));
+['dragleave','dragend'].forEach(ev=>$('rules').addEventListener(ev,()=>$('rules').classList.remove('drag')));
+$('rules').addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();$('rules').classList.remove('drag');
+  const file=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(file)loadRulesFile(file);});
+
 /* ── 시작 ──────────────────────────────────────────────────────── */
 (async()=>{
   try{state=await api.load();}catch{setNotice('이전 대화를 읽지 못했습니다. 새 대화로 시작합니다.');}
   state.messages=state.messages.filter(m=>m.content);if(!Array.isArray(state.knowledge))state.knowledge=[];
-  $('prompt').value=state.prompt;$('botName').value=state.name;renderMessages();renderKnowledge();showEngine();
+  $('prompt').value=state.prompt;$('botName').value=state.name;$('rules').value=state.rules||'';renderMessages();renderKnowledge();showEngine();
   loadSharedBot();
   await checkConnection();controls();
 })();
