@@ -65,6 +65,16 @@ textarea:hover,select:hover,input:hover{border-color:var(--color-muted)}
 textarea:disabled,select:disabled,input:disabled{background:var(--color-disabled-bg);color:var(--color-disabled-ink);border-color:var(--color-disabled-bg);cursor:not-allowed}
 select{font-size:.83em;margin-bottom:var(--space-2xs)}
 #prompt{font-size:1em;margin-bottom:var(--space-md);min-height:300px;max-height:720px}
+#botName{margin-bottom:var(--space-md);font-size:.9em}
+.prompt-label{margin-top:var(--space-2xs)}
+.examples{display:flex;flex-wrap:wrap;gap:var(--space-xs);margin-bottom:var(--space-sm)}
+.example{font-size:.72em;font-weight:500;padding:var(--space-2xs) var(--space-sm);min-height:44px;background:var(--color-chip);color:var(--color-accent);border-color:var(--color-rule-soft)}
+.example:hover{border-color:var(--color-accent);filter:none}
+#share{margin-top:var(--space-xs);font-size:.8em}
+.share-box{margin-top:var(--space-sm)}
+.share-box label{font-size:.78em}
+.share-box input{margin-bottom:var(--space-xs)}
+.welcome .start-note{margin-top:var(--space-md)}
 .role-state{font-size:.76em;color:var(--color-accent);margin:var(--space-sm) 0 0;min-height:1.6em}
 
 .panel{border-top:1px solid var(--color-rule);margin-top:var(--space-lg);padding-top:var(--space-md)}
@@ -185,10 +195,25 @@ dialog p{margin:var(--space-sm) 0 var(--space-lg)}
 <main>
 <div id="workspace" class="workspace">
 <aside id="sidebar" aria-label="AI 역할과 연결 설정">
-  <label for="prompt">AI에게 맡길 역할</label>
+  <label for="botName">챗봇 이름</label>
+  <input id="botName" type="text" maxlength="30" autocomplete="off" placeholder="예: 영어 선생님 토끼">
+  <label for="prompt" class="prompt-label">AI에게 맡길 역할</label>
+  <div class="examples" role="group" aria-label="예시 역할">
+    <button type="button" class="example" data-example="kind">친절한 도우미</button>
+    <button type="button" class="example" data-example="english">영어 선생님</button>
+    <button type="button" class="example" data-example="writing">글 다듬기</button>
+    <button type="button" class="example" data-example="quiz">퀴즈 진행자</button>
+    <button type="button" class="example" data-example="friend">고민 상담 친구</button>
+  </div>
   <textarea id="prompt" rows="9" maxlength="4000" placeholder="예: 영어를 쉽게 가르쳐 주세요."></textarea>
   <button id="apply" class="wide" type="button" disabled>역할 적용</button>
   <p id="roleState" class="role-state" role="status">이 역할로 대화합니다.</p>
+  <button id="share" class="light wide" type="button">내 챗봇 공유하기</button>
+  <div id="shareBox" class="share-box" hidden>
+    <label for="shareLink">공유 링크</label>
+    <input id="shareLink" type="text" readonly>
+    <p id="shareNote" class="caption" role="status"></p>
+  </div>
 
   <details id="knowledgePanel" class="panel">
     <summary>지식 추가 <span class="muted">(선택)</span></summary>
@@ -321,10 +346,10 @@ let settings=loadSettings();
 function saveSettings(){try{localStorage.setItem(ENGINE_KEY,JSON.stringify(settings));}catch{}}
 
 function loadState(){
-  const d={prompt:DEFAULT_PROMPT,model:'',fontSize:22,messages:[],knowledge:[]};
+  const d={name:'',prompt:DEFAULT_PROMPT,model:'',fontSize:22,messages:[],knowledge:[]};
   let v;try{v=JSON.parse(localStorage.getItem(STATE_KEY)||'null');}catch{return d;}
   if(!v||typeof v!=='object')return d;
-  return {...d,prompt:typeof v.prompt==='string'?v.prompt.slice(0,4000):d.prompt,model:typeof v.model==='string'?v.model:'',
+  return {...d,name:typeof v.name==='string'?v.name.slice(0,30):'',prompt:typeof v.prompt==='string'?v.prompt.slice(0,4000):d.prompt,model:typeof v.model==='string'?v.model:'',
     messages:Array.isArray(v.messages)?v.messages.filter(m=>m&&['user','assistant'].includes(m.role)&&typeof m.content==='string').slice(-100):[],
     knowledge:Array.isArray(v.knowledge)?v.knowledge.filter(k=>k&&typeof k.name==='string'&&typeof k.text==='string').slice(0,20):[]};
 }
@@ -649,7 +674,7 @@ async function readKnowledgeFile(payload){
 /* ── 화면 (데스크탑 앱 app.js를 옮겨 옴) ───────────────────────── */
 function newId(){return globalThis.crypto&&crypto.randomUUID?crypto.randomUUID():'chat-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);}
 const $=id=>document.getElementById(id);
-let state={prompt:DEFAULT_PROMPT,model:'',fontSize:22,messages:[],knowledge:[]};
+let state={name:'',prompt:DEFAULT_PROMPT,model:'',fontSize:22,messages:[],knowledge:[]};
 let connected=false,connectChecked=false,caps={},starterModel='';
 let ready=false,models=[],busy='',job=null,lastRequest=null,saveTimer=null,confirmAction=null,connectGeneration=0;
 
@@ -659,6 +684,7 @@ function controls(){
   const changed=dirty(),eng=settings.engine;
   $('send').disabled=!ready||!!busy||changed||!$('message').value.trim();
   $('stop').hidden=busy!=='chat';$('stop').disabled=false;
+  document.querySelectorAll('.example').forEach(b=>b.disabled=!!busy);$('botName').disabled=!!busy;$('share').disabled=!!busy;
   $('apply').disabled=!!busy||!ready;$('newChat').disabled=!!busy||!state.messages.length;
   $('modelApply').disabled=!!busy||!ready||$('model').value===state.model;
   $('model').disabled=!!busy||!models.length;$('prompt').disabled=!!busy;
@@ -699,7 +725,8 @@ function renderMessages(){
         const start=make('button','AI 준비하기');start.type='button';start.id='startWebllm';
         start.onclick=()=>downloadModel($('model').value);
         welcome.append(make('div','바로 실습','welcome-icon'),make('h3','먼저 AI를 준비해 주세요'),
-          make('p','처음 한 번 AI를 이 브라우저에 받습니다. 몇 분 걸릴 수 있고, 다음에 오면 금방 준비됩니다.'),start);
+          make('p','처음 한 번 AI를 이 브라우저에 받습니다. 몇 분 걸릴 수 있고, 다음에 오면 금방 준비됩니다.'),start,
+          make('p','수업 전에 미리 눌러 두면, 수업 때 바로 쓸 수 있어요.','caption start-note'));
         area.append(welcome);return;
       }
     }
@@ -712,7 +739,7 @@ function renderMessages(){
   }
   state.messages.forEach(m=>{
     const item=document.createElement('article');item.className='message '+m.role;
-    const who=document.createElement('div');who.className='speaker';who.textContent=m.role==='user'?'나':'AI';
+    const who=document.createElement('div');who.className='speaker';who.textContent=m.role==='user'?'나':(state.name||'AI');
     const bubble=document.createElement('div');bubble.className='bubble';bubble.textContent=m.content||'답변을 준비하고 있습니다…';
     item.append(who,bubble);
     if(m.interrupted){const note=document.createElement('div');note.className='incomplete';note.textContent='중간에 멈춘 답변입니다.';item.append(note);}
@@ -792,7 +819,7 @@ async function send(textOverride){
   if(textOverride===undefined)$('message').value='';
   setNotice();$('status').textContent='AI가 답변을 준비하고 있습니다. 처음에는 시간이 걸릴 수 있어요.';
   renderMessages();controls();save();
-  try{await api.chat({id,model:state.model,prompt:state.prompt,knowledge:knowledgeText(),history:[...before.filter(m=>!m.interrupted),{role:'user',content:text}]});}
+  try{await api.chat({id,model:state.model,prompt:(state.name?'당신의 이름은 "'+state.name+'"입니다. 누가 이름을 물으면 이 이름으로 답하세요.\n':'')+state.prompt,knowledge:knowledgeText(),history:[...before.filter(m=>!m.interrupted),{role:'user',content:text}]});}
   catch(error){finish('error',String(error.message||error));}
 }
 function finish(type,message){
@@ -961,11 +988,64 @@ $('sidebarToggle').onclick=()=>{
   try{localStorage.setItem('easy-ai-sidebar',open?'open':'closed');}catch{}
 };
 
+/* ── 챗봇 이름, 예시 역할, 공유 링크 ───────────────────────────── */
+const EXAMPLES={
+  kind:{name:'친절한 도우미',prompt:DEFAULT_PROMPT},
+  english:{name:'영어 선생님',prompt:'당신은 처음 영어를 배우는 사람을 돕는 선생님입니다. 한국어 존댓말로 설명하세요. 일상에서 쓰는 짧은 영어 표현을 하나씩 알려 주세요. 쉬운 질문을 하나 하고 제 답을 기다려 주세요. 틀려도 친절하게 고쳐 주세요.'},
+  writing:{name:'글 다듬기 도우미',prompt:'당신은 글을 다듬어 주는 도우미입니다. 제가 쓴 글의 뜻은 그대로 두고 자연스럽고 읽기 쉽게 고쳐 주세요. 먼저 고친 글을 보여 주고, 바뀐 점을 한국어 존댓말로 짧게 설명하세요.'},
+  quiz:{name:'퀴즈 진행자',prompt:'당신은 재미있는 퀴즈 진행자입니다. 한국어 존댓말로 말하세요. 제가 고른 주제로 문제를 하나씩 내고, 제 답을 기다린 뒤 맞았는지 알려 주고 짧게 설명해 주세요. 쉬운 문제부터 시작하세요.'},
+  friend:{name:'고민 상담 친구',prompt:'당신은 따뜻한 고민 상담 친구입니다. 한국어 존댓말로 말하세요. 먼저 제 이야기를 끝까지 듣고 마음을 알아주는 말을 해 주세요. 조언은 짧게 하나씩만 하세요. 건강이나 법률처럼 전문가가 필요한 일은 전문가와 상의하라고 알려 주세요.'}
+};
+document.querySelectorAll('.example').forEach(button=>button.addEventListener('click',()=>{
+  const ex=EXAMPLES[button.dataset.example];if(!ex||busy)return;
+  const current=$('prompt').value.trim();
+  const fill=()=>{$('prompt').value=ex.prompt;
+    if(!$('botName').value.trim()){$('botName').value=ex.name;state.name=ex.name;scheduleSave();}
+    controls();$('prompt').focus();};
+  const isTemplate=!current||current===state.prompt.trim()||Object.values(EXAMPLES).some(e=>e.prompt===current);
+  if(isTemplate)fill();else ask('예시로 바꿀까요?','지금 적어 둔 역할이 예시 내용으로 바뀝니다.',fill);
+}));
+$('botName').addEventListener('input',()=>{state.name=$('botName').value.trim().slice(0,30);scheduleSave();if(state.messages.length)renderMessages();});
+
+function encodeBot(bot){const bytes=new TextEncoder().encode(JSON.stringify(bot));let bin='';bytes.forEach(b=>{bin+=String.fromCharCode(b);});
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function decodeBot(text){
+  try{const bin=atob(text.replace(/-/g,'+').replace(/_/g,'/'));const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
+    const v=JSON.parse(new TextDecoder().decode(bytes));
+    if(!v||typeof v.p!=='string'||!v.p.trim())return null;
+    return {name:typeof v.n==='string'?v.n.trim().slice(0,30):'',prompt:v.p.slice(0,4000)};
+  }catch{return null;}
+}
+$('share').onclick=async()=>{
+  $('shareBox').hidden=false;
+  if(dirty()){$('shareLink').value='';$('shareNote').textContent='바뀐 역할을 먼저 적용한 뒤 공유해 주세요.';return;}
+  const url=location.href.split('#')[0]+'#bot='+encodeBot({v:1,n:state.name,p:state.prompt});
+  $('shareLink').value=url;
+  let copied=false;try{await navigator.clipboard.writeText(url);copied=true;}catch{}
+  $('shareNote').textContent=(copied?'링크를 복사했습니다. 친구에게 보내 보세요. ':'위 링크를 눌러 복사해 주세요. ')+
+    (location.protocol==='file:'?'지금은 내 PC 파일로 열려 있어서, 다른 기기에서는 이 링크가 열리지 않습니다. 온라인 주소에서 공유해 주세요.':'넣은 자료는 링크에 담기지 않습니다.');
+  if(!copied){$('shareLink').focus();$('shareLink').select();}
+};
+$('shareLink').addEventListener('focus',()=>$('shareLink').select());
+function loadSharedBot(){
+  const m=location.hash.match(/^#bot=([A-Za-z0-9_-]+)$/);if(!m)return;
+  history.replaceState(null,'',location.href.split('#')[0]);
+  const bot=decodeBot(m[1]);
+  if(!bot){setNotice('공유 링크를 읽지 못했습니다. 링크가 잘리지 않았는지 확인해 주세요.');return;}
+  const apply=()=>{state.name=bot.name;state.prompt=bot.prompt;state.messages=[];state.knowledge=[];lastRequest=null;
+    $('botName').value=bot.name;$('prompt').value=bot.prompt;setNotice();renderMessages();renderKnowledge();save();controls();
+    $('status').textContent=(bot.name?'"'+bot.name+'" 챗봇':'공유받은 챗봇')+'을 불러왔습니다. 말을 걸어 보세요.';};
+  if(state.messages.length||state.knowledge.length)ask((bot.name||'공유받은 챗봇')+'을 불러올까요?','지금 화면의 대화와 넣은 자료는 지워지고, 공유받은 챗봇으로 바뀝니다.',apply);
+  else apply();
+}
+window.addEventListener('hashchange',loadSharedBot);
+
 /* ── 시작 ──────────────────────────────────────────────────────── */
 (async()=>{
   try{state=await api.load();}catch{setNotice('이전 대화를 읽지 못했습니다. 새 대화로 시작합니다.');}
   state.messages=state.messages.filter(m=>m.content);if(!Array.isArray(state.knowledge))state.knowledge=[];
-  $('prompt').value=state.prompt;renderMessages();renderKnowledge();showEngine();
+  $('prompt').value=state.prompt;$('botName').value=state.name;renderMessages();renderKnowledge();showEngine();
+  loadSharedBot();
   await checkConnection();controls();
 })();
 </script>
